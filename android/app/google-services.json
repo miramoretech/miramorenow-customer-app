@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "160796661163",
+    "project_id": "miramorenow",
+    "storage_bucket": "miramorenow.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:160796661163:android:5669a740bce98b7520eeee",
+        "android_client_info": {
+          "package_name": "com.miramoretech.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGYZD_xUCz6glPd_vie8dNV53S8e21_OI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

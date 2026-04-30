@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- ✅ UPDATED viewport for Android - prevents zoom and overflow -->
+    <meta 
+      name="viewport" 
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" 
+    />
+    <title>MiramoreNow – Food & Shopping</title>
+
+    <!-- ✅ PWA tags - added for home screen install support -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Miramore">
+    <meta name="theme-color" content="#1a5c2a">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    
+    <!-- Prevent screen overflow -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      html, body {
+        overflow-x: hidden;
+        position: relative;
+        width: 100%;
+        max-width: 100vw;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      #root {
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
+        min-height: 100vh;
+      }
+      
+      /* Android safe area fixes */
+      .fixed-bottom-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    </style>
+    
+    <!-- ✅ Google Maps - async + defer + callback -->
+    <script>
+      window.initGoogleMaps = function () {
+        window.dispatchEvent(new Event("google-maps-loaded"));
+        console.log("✅ Google Maps loaded");
+      };
+    </script>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAcgWyOPX7Y1qY98BolRvjPqwMuSs6prfY&libraries=places,geometry&callback=initGoogleMaps&loading=async"
+      async
+      defer
+    ></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Flutterwave Checkout -->
+    <script>
+      (function () {
+        if (window.FlutterwaveCheckout) return;
+        var s = document.createElement("script");
+        s.src = "https://checkout.flutterwave.com/v3.js";
+        s.async = true;
+        s.onload = function () { console.log("✅ Flutterwave loaded"); };
+        document.body.appendChild(s);
+      })();
+    </script>
+  </body>
+</html>

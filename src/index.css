@@ -1,0 +1,682 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   ✅ ANDROID SCREEN FITTING FIXES - PREVENTS OVERFLOW
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Reset all margins and prevent overflow */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure html and body don't overflow */
+html, body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+/* Root container - prevents horizontal scroll */
+#root {
+  overflow-x: hidden !important;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Ensure all containers respect screen width */
+div, section, header, footer, main, article, aside {
+  overflow-x: hidden !important;
+  max-width: 100vw;
+}
+
+/* Prevent any element from exceeding screen width */
+.container, .px-3, .px-4, .px-5, .px-6 {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  max-width: 100% !important;
+}
+
+/* Ensure images and media don't overflow */
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Fix for bottom navigation on Android - CRITICAL */
+.fixed.bottom-0,
+.bottom-nav,
+nav.fixed.bottom-0 {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  background-color: white !important;
+  z-index: 1000 !important;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-top: 8px !important;
+  margin-bottom: 0 !important;
+}
+
+/* Ensure main content doesn't hide behind bottom nav */
+main, 
+[role="main"], 
+.min-h-screen, 
+.page-container {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  margin-bottom: 0 !important;
+}
+
+/* Fix for notch/hole-punch cameras on Android */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .sticky.top-0, 
+  header.sticky,
+  .fixed.top-0 {
+    padding-top: env(safe-area-inset-top) !important;
+  }
+}
+
+/* Better touch targets for mobile - no overflow */
+button, 
+[role="button"],
+.cursor-pointer,
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Prevent text from overflowing on small screens */
+.truncate, 
+.line-clamp-1, 
+.line-clamp-2 {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Allow line-clamp 2 for longer text */
+.line-clamp-2 {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Fix for Android WebView specific issues */
+@media (max-width: 480px) {
+  /* Ensure body doesn't overflow */
+  body {
+    overflow-x: hidden !important;
+    width: 100%;
+    position: relative;
+  }
+  
+  /* Adjust font sizes for better fit */
+  body {
+    font-size: 13px;
+  }
+  
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  h2 {
+    font-size: 1.125rem !important;
+  }
+  
+  h3 {
+    font-size: 0.9375rem !important;
+  }
+  
+  button, .btn {
+    font-size: 0.8125rem !important;
+    min-height: 44px !important;
+  }
+  
+  /* Fix bottom nav padding */
+  .fixed.bottom-0, 
+  nav.fixed.bottom-0 { 
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 12px)) !important; 
+  }
+  
+  /* Adjust card padding for small screens */
+  .card, .rounded-2xl, .rounded-xl {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  
+  /* Better grid for small screens */
+  .grid {
+    gap: 12px !important;
+  }
+  
+  .grid-cols-2 {
+    gap: 10px !important;
+  }
+  
+  /* Fix for flex wrap */
+  .flex-wrap {
+    gap: 8px !important;
+  }
+}
+
+/* Android 11+ gesture bar fix */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .fixed-bottom-safe {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+}
+
+/* Fallback for older Android versions */
+@supports not (padding-bottom: env(safe-area-inset-bottom)) {
+  .fixed.bottom-0, 
+  nav.fixed.bottom-0 {
+    padding-bottom: 20px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REST OF YOUR EXISTING STYLES (KEEP AS IS)
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* ══════════════════════════════════════════════
+       MIRAMORENOW 2026 BRAND IDENTITY
+       Fresh Green (#10B981) + Golden Yellow (#FBBF24)
+       Creates hunger, trust, happiness & addiction
+    ══════════════════════════════════════════════ */
+
+    /* ── BRAND CORE (FRESH GREEN - Appetite & Trust) ── */
+    --color-brand-green: #10B981;
+    --color-brand-green-deep: #059669;
+    --color-brand-green-dark: #047857;
+    --color-brand-green-light: #D1FAE5;
+    --color-brand-green-soft: #ECFDF5;
+    --color-brand-green-bg: #F0FDF4;
+
+    /* ── ENERGY & REWARDS (GOLD - Happiness & Deals) ── */
+    --color-brand-yellow: #FBBF24;
+    --color-brand-yellow-deep: #F59E0B;
+    --color-brand-yellow-dark: #D97706;
+    --color-brand-yellow-light: #FEF3C7;
+    --color-brand-yellow-soft: #FFFBEB;
+
+    /* ── CTA (PAY BUTTON - Orange creates urgency) ── */
+    --color-cta: #F97316;
+    --color-cta-deep: #EA580C;
+    --color-cta-light: #FFEDD5;
+
+    /* ── CLEAN WHITES (Purity & Elegance) ── */
+    --color-white: #FFFFFF;
+    --color-white-off: #FAFAF9;
+    --color-white-cream: #F5F5F4;
+
+    /* ── ✅ SHARP, BOLD TEXT COLORS (Global App Quality) ── */
+    --color-text-primary: #0F172A;      /* Almost black - sharpest */
+    --color-text-secondary: #334155;    /* Dark slate - readable */
+    --color-text-muted: #64748B;        /* Medium slate */
+    --color-text-hint: #94A3B8;         /* Light slate */
+    --color-text-on-green: #FFFFFF;
+    --color-text-on-yellow: #78350F;
+
+    /* ── SHADOWS (Depth & Premium Feel) ── */
+    --shadow-card: 0px 4px 20px rgba(0,0,0,0.06);
+    --shadow-card-hover: 0px 8px 30px rgba(0,0,0,0.08);
+    --shadow-green: 0 6px 20px rgba(16,185,129,0.25);
+    --shadow-green-lg: 0 10px 30px rgba(16,185,129,0.3);
+    --shadow-yellow: 0 6px 20px rgba(251,191,36,0.25);
+    --shadow-cta: 0 6px 20px rgba(249,115,22,0.35);
+    --shadow-soft: 0 2px 8px rgba(0,0,0,0.04);
+
+    /* ── RADIUS (Modern, Curvy, Friendly) ── */
+    --radius-xs: 6px;
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --radius-2xl: 32px;
+    --radius-3xl: 40px;
+    --radius-full: 9999px;
+
+    /* Tailwind / Shadcn CSS Variables */
+    --background: 150 25% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 158 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 158 84% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 60 10% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 48 96% 53%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 60 10% 92%;
+    --input: 60 10% 92%;
+    --ring: 158 84% 39%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* ✅ GLOBAL TEXT STYLES - Sharp, Bold, Fancy (Uber/Bolt/Zomato quality) */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-synthesis: none;
+  }
+
+  body {
+    @apply bg-background;
+    background-color: var(--color-white-off);
+    font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-weight: 450;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+  }
+
+  /* ✅ BOLDER HEADINGS */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    line-height: 1.3;
+    font-weight: 800;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: 1rem;
+    line-height: 1.4;
+    font-weight: 650;
+  }
+
+  /* ✅ SHARPER BODY TEXT */
+  p, li, span, a, div {
+    font-weight: 450;
+    letter-spacing: -0.01em;
+    color: var(--color-text-secondary);
+  }
+
+  /* ✅ BOLDER BUTTON TEXT */
+  button, .btn {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-family: 'Inter', 'Poppins', sans-serif;
+  }
+
+  /* ✅ PRICE TEXT - Extra Bold */
+  .price-amount, [class*="price"] {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--color-brand-green);
+  }
+
+  /* ✅ PRODUCT TITLES */
+  .product-title, [class*="product"] h3 {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+  }
+
+  /* ✅ VENDOR NAMES */
+  .vendor-name, [class*="vendor"] {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-brand-green);
+  }
+
+  /* ✅ BOLDER LABELS */
+  label, .label, .badge {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* ✅ INPUT TEXT */
+  input, textarea, select {
+    font-weight: 450;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--color-text-hint);
+    font-weight: 400;
+  }
+
+  /* Smooth scrolling for the whole app */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY CLASSES - Extra Bold Text Options
+   ═══════════════════════════════════════════════════════════════ */
+
+.text-sharp {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.text-bold-heavy {
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.text-bold {
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.text-semibold {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.text-medium {
+  font-weight: 500 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BRAND BUTTONS - Green, Yellow, CTA
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Primary Green Button */
+.btn-brand {
+  background: linear-gradient(135deg, #10B981, #059669);
+  box-shadow: var(--shadow-green);
+  color: white;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-brand:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-green-lg);
+}
+.btn-brand:active {
+  transform: scale(0.97);
+}
+
+/* CTA Orange Button (Checkout, Pay Now) */
+.btn-cta {
+  background: linear-gradient(135deg, #F97316, #EA580C);
+  box-shadow: var(--shadow-cta);
+  color: white;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-cta:hover {
+  background: linear-gradient(135deg, #EA580C, #C2410C);
+  transform: translateY(-2px);
+}
+.btn-cta:active {
+  transform: scale(0.97);
+}
+
+/* Gold/Yellow Button (Rewards, Deals, Promos) */
+.btn-gold {
+  background: linear-gradient(135deg, #FBBF24, #F59E0B);
+  box-shadow: var(--shadow-yellow);
+  color: #78350F;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-gold:hover {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: white;
+  transform: translateY(-2px);
+}
+.btn-gold:active {
+  transform: scale(0.97);
+}
+
+/* Outline Green Button */
+.btn-outline-brand {
+  background: transparent;
+  border: 2px solid #10B981;
+  color: #10B981;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-outline-brand:hover {
+  background: #10B981;
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BADGES - Category, Deal, Rating
+   ═══════════════════════════════════════════════════════════════ */
+
+.badge-brand {
+  background: var(--color-brand-green-light);
+  color: var(--color-brand-green-deep);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-gold {
+  background: var(--color-brand-yellow-light);
+  color: var(--color-brand-yellow-dark);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-offer {
+  background: var(--color-cta);
+  color: white;
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-deal {
+  background: linear-gradient(135deg, #FBBF24, #F59E0B);
+  color: #78350F;
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRICE STYLING
+   ═══════════════════════════════════════════════════════════════ */
+
+.price-pill {
+  background: var(--color-brand-green-light);
+  color: var(--color-brand-green);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-weight: 800;
+  font-size: 13px;
+  display: inline-block;
+}
+.price-amount {
+  color: var(--color-brand-green);
+  font-weight: 800;
+  font-size: 15px;
+}
+.price-original {
+  color: var(--color-text-hint);
+  text-decoration: line-through;
+  font-size: 12px;
+}
+.price-sale {
+  color: var(--color-cta);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARD STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+.card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+.card-product {
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  border: 1px solid var(--color-brand-green-soft);
+}
+.card-product:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOW EFFECTS (Attractive Highlights)
+   ═══════════════════════════════════════════════════════════════ */
+
+.shadow-glow-brand {
+  box-shadow: 0 0 20px rgba(16,185,129,0.35);
+  animation: pulse-green 2s ease-in-out infinite;
+}
+.shadow-glow-cta {
+  box-shadow: 0 0 20px rgba(249,115,22,0.35);
+  animation: pulse-orange 2s ease-in-out infinite;
+}
+.shadow-glow-gold {
+  box-shadow: 0 0 20px rgba(251,191,36,0.35);
+  animation: pulse-yellow 2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GRADIENT TEXT (Premium Headlines)
+   ═══════════════════════════════════════════════════════════════ */
+
+.text-gradient-brand {
+  background: linear-gradient(135deg, #10B981, #059669, #FBBF24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-cta {
+  background: linear-gradient(135deg, #F97316, #EA580C);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(16,185,129,0); }
+}
+@keyframes pulse-yellow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(251,191,36,0); }
+}
+@keyframes pulse-orange {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(249,115,22,0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR HIDE (Keep functionality)
+   ═══════════════════════════════════════════════════════════════ */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SMOOTH TRANSITIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
