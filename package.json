@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "node -e \"const fs=require('fs');const path=require('path');const dir='src/utils';const file=path.join(dir,'promoConfig.ts');if(!fs.existsSync(dir))fs.mkdirSync(dir,{recursive:true});if(!fs.existsSync(file))fs.writeFileSync(file,`// src/utils/promoConfig.ts\\nexport const APP_LAUNCH_DATE = new Date('2026-04-23');\\nexport const isFreeDeliveryActive = (): boolean => { const today = new Date(); const daysSinceLaunch = (today.getTime() - APP_LAUNCH_DATE.getTime()) / (1000*60*60*24); return daysSinceLaunch <= 14; };\\nexport const getRemainingPromoDays = (): number => { const today = new Date(); const daysSinceLaunch = (today.getTime() - APP_LAUNCH_DATE.getTime()) / (1000*60*60*24); const remaining = Math.max(0, 14 - Math.floor(daysSinceLaunch)); return remaining; };\\n`);\"",
+    "build": "npm run prebuild && vite build",
     "dev": "vite",
-    "build": "node -e \"const fs=require('fs');if(!fs.existsSync('src/utils/promoConfig.ts'))fs.writeFileSync('src/utils/promoConfig.ts','export const promoConfig = {};');\" && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
