@@ -2,14 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- ✅ UPDATED viewport for Android - prevents zoom and overflow -->
+    
+    <!-- Google Search Console Verification -->
+    <meta name="google-site-verification" content="abc123xyz" />
+
+    <!-- viewport -->
     <meta 
       name="viewport" 
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" 
     />
+
     <title>MiramoreNow – Food & Shopping</title>
 
-    <!-- ✅ PWA tags - added for home screen install support -->
+    <!-- PWA tags -->
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,7 +22,6 @@
     <meta name="theme-color" content="#1a5c2a">
     <link rel="apple-touch-icon" href="/icon-192.png">
     
-    <!-- Prevent screen overflow -->
     <style>
       * {
         margin: 0;
@@ -48,17 +52,16 @@
         min-height: 100vh;
       }
       
-      /* Android safe area fixes */
       .fixed-bottom-safe {
         padding-bottom: env(safe-area-inset-bottom);
       }
     </style>
     
-    <!-- ✅ Google Maps - async + defer + callback -->
+    <!-- Google Maps -->
     <script>
       window.initGoogleMaps = function () {
         window.dispatchEvent(new Event("google-maps-loaded"));
-        console.log("✅ Google Maps loaded");
+        console.log("Google Maps loaded");
       };
     </script>
     <script
@@ -67,6 +70,7 @@
       defer
     ></script>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
@@ -78,7 +82,9 @@
         var s = document.createElement("script");
         s.src = "https://checkout.flutterwave.com/v3.js";
         s.async = true;
-        s.onload = function () { console.log("✅ Flutterwave loaded"); };
+        s.onload = function () {
+          console.log("Flutterwave loaded");
+        };
         document.body.appendChild(s);
       })();
     </script>
