@@ -197,14 +197,13 @@ function AppContent() {
         <Route path="/rider/history" element={<RiderHistory />} />
         <Route path="/rider/earnings" element={<RiderEarnings />} />
 
-        {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
 }
 
-// ✅ ENSURE DEFAULT EXPORT
+// ✅ DEFAULT EXPORT – ensures main.tsx can import App
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
