@@ -4,12 +4,18 @@ import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
+import androidx.core.view.WindowCompat;          // <-- ADDED for edge-to-edge
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // ──────────────────────────────────────────────────────────
+        // EDGE-TO-EDGE FIX for Android 15 (SDK 35)
+        // ──────────────────────────────────────────────────────────
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         // Get the WebView instance after Capacitor initialisation
         WebView webView = getBridge().getWebView();

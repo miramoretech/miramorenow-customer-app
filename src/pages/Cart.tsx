@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ArrowLeft, ShoppingCart, CreditCard, Wallet, Truck, Store,
-  MessageSquare, Loader2, MapPin, Navigation, X, Info
+  MessageSquare, Loader2, MapPin, Navigation, X, Info, AlertTriangle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -31,10 +31,10 @@ declare global {
 
 const FLW_PUBLIC_KEY = "FLWPUBK-a4dc9522e8b015ae0f4ae2f39b05be30-X";
 const FALLBACK_FEE_PER_VENDOR = 1200;
-const MAX_DELIVERY_KM = 20;
+const MAX_DELIVERY_KM = 15;           // ← Changed from 20 to 15
 
-// Service charge rate (30% of subtotal)
-const SERVICE_CHARGE_RATE = 0.30;
+// Service charge rate: 20% (was 30%)
+const SERVICE_CHARGE_RATE = 0.20;
 
 // Tiered delivery fee function with PROMO OVERRIDE
 function getTieredDeliveryFee(distanceKm: number): number {
@@ -296,7 +296,7 @@ const Cart = () => {
     if (vendorNames.length > 0 && googleMapsLoaded) fetchCoords();
   }, [vendorNames.join(","), googleMapsLoaded]);
 
-  // ✅ LAUNCH MODE: Remove far-location blocker – always allow orders
+  // ✅ Check delivery distance and block if any vendor > MAX_DELIVERY_KM
   useEffect(() => {
     if (!customerLatLng || vendorCoords.size === 0) return;
     const tooFar: string[] = [];
@@ -310,8 +310,7 @@ const Cart = () => {
       }
     }
     setFarVendors(tooFar);
-    // 🚀 LAUNCH OVERRIDE: Never block orders, even if vendors are far
-    setDeliveryUnavailable(false);
+    setDeliveryUnavailable(tooFar.length > 0); // ← Block checkout if any vendor too far
   }, [customerLatLng, vendorCoords]);
 
   const calculateDeliveryFee = async () => {
@@ -521,7 +520,6 @@ const Cart = () => {
           if (data.status === "successful") {
             toast.success("Payment successful! Redirecting...");
             
-            // Update orders to paid status
             await supabase
               .from("orders")
               .update({
@@ -532,13 +530,9 @@ const Cart = () => {
               })
               .in("id", allOrderIds);
             
-            // Clear cart
             clearCart();
-            
-            // Close Checkout Modal
             setShowCheckout(false);
             
-            // Navigate to Order Success page with the order ID
             setTimeout(() => {
               navigate(`/order-success?order_id=${firstOrderId}`, { replace: true });
             }, 500);
@@ -727,14 +721,14 @@ const Cart = () => {
                 </div>
               )}
               
-              {/* 🎉 PROMO BANNER - FREE DELIVERY */}
+              {/* 🎉 PROMO BANNER - FREE DELIVERY (Updated for May) */}
               {promoActive && !isPickup && (
                 <div className="mt-3 p-3 bg-gradient-to-r from-[#2E7D32] to-[#1B5E20] rounded-xl flex items-center justify-between shadow-md">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🎉</span>
                     <div>
                       <p className="text-white font-bold text-sm">FREE DELIVERY!</p>
-                      <p className="text-green-100 text-xs">Launch offer • 14 days only</p>
+                      <p className="text-green-100 text-xs">May Special • All month long</p>
                     </div>
                   </div>
                   <div className="bg-white/20 rounded-full px-2 py-1">
@@ -783,7 +777,7 @@ const Cart = () => {
             </div>
           </div>
 
-          {/* Order Summary with 30% Service Charge */}
+          {/* Order Summary with 20% Service Charge */}
           <div className="bg-white rounded-2xl border border-[#E8F5E9] p-4 space-y-3 shadow-sm">
             <p className="text-xs font-bold text-gray-600">Order Summary</p>
             
@@ -795,11 +789,11 @@ const Cart = () => {
               
               <div className="flex justify-between items-start text-sm">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-gray-500">Service charge (30%)</span>
+                  <span className="text-gray-500">Service charge (20%)</span>
                   <div className="group relative">
                     <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2 bg-gray-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      30% service fee covers platform maintenance, 24/7 customer support, and secure payment processing.
+                      20% service fee covers platform maintenance, 24/7 customer support, and secure payment processing.
                     </div>
                   </div>
                 </div>
@@ -880,25 +874,42 @@ const Cart = () => {
             </div>
           )}
 
-          {/* 🚀 LAUNCH MODE: Show informational message but DO NOT block order */}
-          {farVendors.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-              <div className="text-2xl mb-1">💛</div>
-              <p className="text-sm font-semibold text-amber-800">Your order includes vendors slightly farther away.</p>
-              <p className="text-xs text-amber-700 mt-1">
-                {farVendors.join(", ")} {farVendors.length === 1 ? "is" : "are"} more than {MAX_DELIVERY_KM} km from your address.
+          {/* 🚫 PROFESSIONAL OUT-OF-RANGE MESSAGE (Blocks checkout) */}
+          {deliveryUnavailable && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+              </div>
+              <p className="text-sm font-bold text-red-800">Delivery not available for this address</p>
+              <p className="text-xs text-red-700 mt-1">
+                {farVendors.length === 1 ? "Vendor" : "Vendors"} <span className="font-semibold">{farVendors.join(", ")}</span> {farVendors.length === 1 ? "is" : "are"} more than {MAX_DELIVERY_KM} km away.
               </p>
-              <p className="text-xs text-amber-600 mt-2">
-                We'll still deliver to you – it's our launch week! 🚀 Thank you for your support.
+              <p className="text-xs text-red-600 mt-2">
+                Please try ordering from a different vendor closer to your location. We recommend exploring similar restaurants or shops in your area.
               </p>
+              <button
+                onClick={() => navigate("/home")}
+                className="mt-3 text-sm font-medium text-red-700 underline underline-offset-2"
+              >
+                Browse nearby vendors →
+              </button>
             </div>
           )}
 
           <button
             onClick={() => setShowCheckout(true)}
-            className="w-full h-14 text-base font-bold rounded-2xl active:scale-[0.97] transition-transform mt-2 text-white bg-[#2E7D32] shadow-lg shadow-[#2E7D32]/30 hover:bg-[#1B5E20]"
+            disabled={deliveryUnavailable || (deliveryMode !== "pickup" && !customerAddress)}
+            className={`w-full h-14 text-base font-bold rounded-2xl active:scale-[0.97] transition-transform mt-2 text-white shadow-lg ${
+              deliveryUnavailable || (deliveryMode !== "pickup" && !customerAddress)
+                ? "bg-gray-300 cursor-not-allowed shadow-none"
+                : "bg-[#2E7D32] shadow-[#2E7D32]/30 hover:bg-[#1B5E20]"
+            }`}
           >
-            Confirm & Pay 🔒
+            {deliveryUnavailable
+              ? "Delivery unavailable for this address"
+              : deliveryMode !== "pickup" && !customerAddress
+              ? "Enter delivery address to continue"
+              : "Confirm & Pay 🔒"}
           </button>
         </div>
       )}

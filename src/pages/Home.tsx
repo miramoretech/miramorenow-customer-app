@@ -1,18 +1,7 @@
-// src/pages/Home.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// FINAL VERSION – Top filters with navigation & highlighting
-// - All / Restaurants → filter on page + highlight
-// - Shops → /shops page
-// - Pharmacies → /pharmacies page (coming soon)
-// - Local Markets → /local-markets page (coming soon)
-// - Price formatting with en‑NG locale (commas)
-// - All categories, vendors, scroll, etc. preserved
-// ─────────────────────────────────────────────────────────────────────────────
-
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ShoppingCart, Search, MapPin, Menu, Star, Mic, X,
-  Filter, Plus, Leaf, Trash2,
+  Filter, Leaf, Trash2,
   ChevronRight, Clock, Sparkles, TrendingUp,
   Flame, CheckCircle2,
 } from "lucide-react";
@@ -28,17 +17,16 @@ import TodayObsession from "@/components/TodayObsession";
 import ShareSoftLifeModal from "@/components/ShareSoftLifeModal";
 import SideMenu from "@/components/SideMenu";
 import ProductDetailModal from "@/components/ProductDetailModal";
+import CategoryScroll from "@/components/CategoryScroll";
 import { useCartStore } from "@/stores/cartStore";
 import { supabase } from "@/lib/supabase";
 import type { Product } from "@/components/ProductCard";
 import { toast } from "sonner";
 
-// ✅ Helper: Format price with comma and proper Naira symbol
-const formatPrice = (price: number): string => {
-  return `₦${price.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-};
+const formatPrice = (price: number): string =>
+  `₦${price.toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-// ── Product images (unchanged) ─────────────────────────────────────────────
+// ── Product images ────────────────────────────────────────────────────────────
 import deluxeParfait250   from "@/assets/products/deluxe-parfait-250ml.png";
 import deluxeParfait330   from "@/assets/products/deluxe-parfait-330ml.png";
 import deluxeParfait500   from "@/assets/products/deluxe-parfait-500ml.png";
@@ -80,7 +68,7 @@ import sddVietnameseBouncyCurls from "@/assets/products/sdd-vietnamese-bouncy-cu
 import sddBurgundyBurmeseCurls  from "@/assets/products/sdd-burgundy-burmese-curls.png";
 import sddBrownFringeUnit       from "@/assets/products/sdd-brown-fringe-unit.png";
 
-// ── Category images ────────────────────────────────────────────────────────
+// ── Category images ───────────────────────────────────────────────────────────
 import parfaitCatImg  from "@/assets/products/deluxe-parfait-330ml.png";
 import shawarmaCatImg from "@/assets/products/shawarma.png";
 import beautyCatImg   from "@/assets/products/omotola-fringe-bounce.png";
@@ -93,7 +81,7 @@ import healthyCatImg  from "@/assets/products/salad.png";
 import swallowCatImg  from "@/assets/products/amala.png";
 import soupsCatImg    from "@/assets/products/egusi-soup.png";
 
-// ── Brand colour tokens ────────────────────────────────────────────────────
+// ── Brand colour tokens ───────────────────────────────────────────────────────
 const C = {
   green:     "#1B6B2F",
   greenDark: "#145228",
@@ -110,18 +98,16 @@ const C = {
   textSub:   "#777777",
 };
 
-// ── Vendor name mapping (unchanged) ────────────────────────────────────────
 const VENDOR_NAMES = {
-  YOGHURT_ARCADE:    "Yoghurt_Arcade",
-  HAIR_LOCS:         "Hair & Locs_by_Effa",
-  CRAVINGS:          "Cravings by K.O.L",
-  SAFARI:            "Safari Restaurant & Lounge",
-  AMALA_ORIKI:       "Amala Oriki",
-  MR_GOOD_GRILL:     "Mr. Good Grill Resto",
-  DIVINE_DELIGHT:    "Divine Delight Foodies",
+  YOGHURT_ARCADE: "Yoghurt_Arcade",
+  HAIR_LOCS:      "Hair & Locs_by_Effa",
+  CRAVINGS:       "Cravings by K.O.L",
+  SAFARI:         "Safari Restaurant & Lounge",
+  AMALA_ORIKI:    "Amala Oriki",
+  MR_GOOD_GRILL:  "Mr. Good Grill Resto",
+  DIVINE_DELIGHT: "Divine Delight Foodies",
 };
 
-// Category → vendor(s) mapping (unchanged)
 const CAT_VENDORS: Record<string, string[]> = {
   parfait:         [VENDOR_NAMES.YOGHURT_ARCADE],
   shawarma:        [VENDOR_NAMES.CRAVINGS],
@@ -137,7 +123,6 @@ const CAT_VENDORS: Record<string, string[]> = {
   soups:           [VENDOR_NAMES.DIVINE_DELIGHT],
 };
 
-// ── Image map (unchanged) ─────────────────────────────────────────────────
 const IMG_MAP: Record<string, string> = {
   "250ml Deluxe Parfait": deluxeParfait250,
   "330ml Deluxe Parfait": deluxeParfait330,
@@ -195,8 +180,8 @@ const packagingOptions = [
 ];
 const soupIds = new Set(["ao-okro","ao-egusi","ao-efo-riro","ao-gbegiri"]);
 
-// ── Supabase fetchers (unchanged) ─────────────────────────────────────────
-const fetchVendors   = async () => {
+// ── Supabase fetchers ─────────────────────────────────────────────────────────
+const fetchVendors = async () => {
   const { data, error } = await supabase.from("vendors").select("*").eq("is_active", true);
   if (error) throw error;
   return data || [];
@@ -217,7 +202,7 @@ const getGreeting = () => {
 const isValidName = (n: string) =>
   ![/\.com$/, /^active$/i, /^inactive$/i, /^test$/i, /^$/].some(p => p.test(n.trim()));
 
-// ── Search helpers (unchanged) ────────────────────────────────────────────
+// ── Search ────────────────────────────────────────────────────────────────────
 const SDICT: Record<string, string[]> = {
   "jolof":["jollof","jollof rice"], "jollof":["jollof rice"], "fried rice":["fried rice"],
   "amala":["amala"], "eba":["eba"], "fufu":["fufu","akpu"], "egusi":["egusi soup"],
@@ -260,66 +245,84 @@ function smartSearch(items: any[], query: string, fields: string[]): any[] {
   });
 }
 
-// ── BANNERS (unchanged) ───────────────────────────────────────────────────
+// ── NEW BANNERS — modern foodie design, Miramore green/gold palette ───────────
+// FIX: Replaced clamp() font sizes with fixed px — clamp() is unreliable on
+// Android WebView because it depends on viewport units which Capacitor reports
+// differently. Fixed px sizes always render correctly.
 const BANNERS = [
-  { id:"play",
-    bg:`linear-gradient(135deg, #0D3D1A 0%, #1B6B2F 60%, #2E7D32 100%)`,
-    accent: C.gold,
-    badge:"🏆 3 Chances Daily",
-    title:"Play & Win",
-    sub:"Real Rewards!",
-    desc:"Match Nigerian dishes — earn ₦1,000 OFF your next order.",
-    cta:"Play Now",
-    icon:"🎮",
-    deco:[{e:"🏅",x:"72%",y:"8%",s:28,o:0.85},{e:"🎯",x:"80%",y:"52%",s:18,o:0.65}],
-    route:"/play", action:false },
-  { id:"send",
-    bg:`linear-gradient(135deg, #145228 0%, #1B6B2F 55%, #388E3C 100%)`,
-    accent: C.gold,
-    badge:"❤️ Share the Love",
-    title:"Send Food",
-    sub:"Anywhere in Lagos",
-    desc:"Surprise someone special with a hot meal today.",
-    cta:"Send Now",
-    icon:"🛵",
-    deco:[{e:"📍",x:"73%",y:"8%",s:26,o:0.85},{e:"🍱",x:"81%",y:"54%",s:20,o:0.65}],
-    route:null, action:true },
-  { id:"party",
-    bg:`linear-gradient(135deg, #1A0D2E 0%, #3B1F6E 55%, #512DA8 100%)`,
-    accent: C.gold,
-    badge:"🎉 Bulk Orders",
-    title:"Planning a Party?",
-    sub:"We've Got You!",
-    desc:"Jollof, Suya, Small Chops & more — catering made easy.",
-    cta:"Plan Party",
-    icon:"🎊",
-    deco:[{e:"🥳",x:"72%",y:"8%",s:28,o:0.85},{e:"🍽️",x:"80%",y:"54%",s:18,o:0.65}],
-    route:"/party", action:false },
-  { id:"gift",
-    bg:`linear-gradient(135deg, #2A1500 0%, #7B3F00 55%, #BF6000 100%)`,
-    accent: C.gold,
-    badge:"🎁 Perfect Present",
-    title:"Gift Cards",
-    sub:"for Food Lovers",
-    desc:"8+ beautiful designs — send joy in any amount.",
-    cta:"Buy Gift Card",
-    icon:"✨",
-    deco:[{e:"🎀",x:"73%",y:"8%",s:26,o:0.85},{e:"💝",x:"81%",y:"54%",s:18,o:0.65}],
-    route:"/gift-cards", action:false },
-  { id:"collect",
-    bg:`linear-gradient(135deg, #0D3D1A 0%, #1B6B2F 50%, #00796B 100%)`,
-    accent: C.gold,
-    badge:"📂 Stay Organised",
-    title:"Save Your",
-    sub:"Favourite Spots",
-    desc:"Bookmark vendors and dishes — find them instantly.",
-    cta:"Explore",
-    icon:"🔖",
-    deco:[{e:"⭐",x:"73%",y:"8%",s:26,o:0.85},{e:"💚",x:"81%",y:"54%",s:18,o:0.65}],
-    route:"/collections", action:false },
+  {
+    id: "play",
+    bg: `linear-gradient(135deg, #0D3D1A 0%, #1B6B2F 55%, #2E7D32 100%)`,
+    accent: "#F5A623",
+    badge: "🏆 3 Chances Daily",
+    title: "Play & Win",
+    sub: "Real Rewards!",
+    desc: "Match Nigerian dishes — earn ₦1,000 OFF your next order.",
+    cta: "Play Now →",
+    topDeco: "🎮",
+    sideDeco: "🏅",
+    route: "/play",
+    action: false,
+  },
+  {
+    id: "send",
+    bg: `linear-gradient(135deg, #145228 0%, #1B6B2F 55%, #388E3C 100%)`,
+    accent: "#F5A623",
+    badge: "❤️ Share the Love",
+    title: "Send Food",
+    sub: "Anywhere in Lagos",
+    desc: "Surprise someone special with a hot meal today.",
+    cta: "Send Now →",
+    topDeco: "🛵",
+    sideDeco: "📍",
+    route: null,
+    action: true,
+  },
+  {
+    id: "party",
+    bg: `linear-gradient(135deg, #1A0D2E 0%, #3B1F6E 55%, #512DA8 100%)`,
+    accent: "#F5A623",
+    badge: "🎉 Bulk Orders",
+    title: "Planning a Party?",
+    sub: "We've Got You!",
+    desc: "Jollof, Suya, Small Chops & more — catering made easy.",
+    cta: "Plan Party →",
+    topDeco: "🥳",
+    sideDeco: "🎊",
+    route: "/party",
+    action: false,
+  },
+  {
+    id: "gift",
+    bg: `linear-gradient(135deg, #2A1500 0%, #7B3F00 55%, #BF6000 100%)`,
+    accent: "#F5A623",
+    badge: "🎁 Perfect Present",
+    title: "Gift Cards",
+    sub: "for Food Lovers",
+    desc: "8+ beautiful designs — send joy in any amount.",
+    cta: "Buy Gift Card →",
+    topDeco: "✨",
+    sideDeco: "🎀",
+    route: "/gift-cards",
+    action: false,
+  },
+  {
+    id: "collect",
+    bg: `linear-gradient(135deg, #0D3D1A 0%, #1B6B2F 50%, #00796B 100%)`,
+    accent: "#F5A623",
+    badge: "📂 Stay Organised",
+    title: "Save Your",
+    sub: "Favourite Spots",
+    desc: "Bookmark vendors and dishes — find them instantly.",
+    cta: "Explore →",
+    topDeco: "🔖",
+    sideDeco: "⭐",
+    route: "/collections",
+    action: false,
+  },
 ];
 
-// ── ALL 12 CATEGORIES (existing) ─────────────────────────────────────────
+// ── ALL 12 CATEGORIES ─────────────────────────────────────────────────────────
 const CATS = [
   { id:"parfait",         name:"Parfait",       emoji:"🍮", img:parfaitCatImg,  fb:[deluxeParfait330], ac:"#F5A623" },
   { id:"shawarma",        name:"Shawarma",      emoji:"🌯", img:shawarmaCatImg, fb:[shawarmaImg],      ac:"#E53935" },
@@ -350,13 +353,11 @@ const CAT_SUBCATS: Record<string, string[]> = {
   soups:           ["Egusi Soup","Okro Soup","Efo Riro","Gbegiri","Pepper Soup"],
 };
 
-// ── Stable vendor image component ─────────────────────────────────────────
+// ── VendorImg (unchanged) ─────────────────────────────────────────────────────
 const VendorImg = ({ url, name }: { url: string|null; name: string }) => {
   const [src, setSrc] = useState<string|null>(null);
   const [err, setErr] = useState(false);
-  useEffect(() => {
-    if (url) setSrc(`${url}?v=1`);
-  }, [url]);
+  useEffect(() => { if (url) setSrc(`${url}?v=1`); }, [url]);
   if (!src || err) return (
     <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,background:C.green50 }}>🏪</div>
   );
@@ -367,34 +368,36 @@ const VendorImg = ({ url, name }: { url: string|null; name: string }) => {
   );
 };
 
-// ── Category image with emoji fallback ────────────────────────────────────
-const CatImg = ({ src, fb, alt, emoji, isActive, accent }: any) => {
-  const [idx, setIdx]   = useState(-1);
-  const [fail, setFail] = useState(false);
-  const cur = idx === -1 ? src : fb[idx];
-  return (
+// ── HScroll: reliable horizontal scroll row (replaces .hs/.hr className pattern)
+// Uses only inline styles so it always works in Android WebView ───────────────
+const HScroll = ({
+  children, style = {},
+}: { children: React.ReactNode; style?: React.CSSProperties }) => (
+  <div style={{
+    overflowX: "scroll",
+    overflowY: "visible",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehaviorX: "contain",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    ...style,
+  }}>
     <div style={{
-      width:58, height:58, borderRadius:14, overflow:"hidden", flexShrink:0,
-      background: fail ? `${accent}18` : C.green50,
-      display:"flex", alignItems:"center", justifyContent:"center",
-      border: isActive ? `2.5px solid ${accent}` : `1.5px solid rgba(255,255,255,0.85)`,
-      boxShadow: isActive
-        ? `0 0 0 3px ${accent}25, 0 4px 14px ${accent}35`
-        : "0 2px 8px rgba(0,0,0,0.10)",
-      transform: isActive ? "scale(1.10)" : "scale(1)",
-      transition: "all 0.22s ease",
+      display: "flex",
+      flexDirection: "row",
+      flexWrap: "nowrap",
+      alignItems: "center",
+      minWidth: "max-content",
+      width: "max-content",
     }}>
-      {fail
-        ? <span style={{ fontSize:26 }}>{emoji}</span>
-        : <img src={cur} alt={alt} loading="eager"
-            style={{ width:"100%",height:"100%",objectFit:"cover" }}
-            onError={()=>{ const n=idx+1; n<fb.length?setIdx(n):setFail(true); }} />
-      }
+      {children}
     </div>
-  );
-};
+  </div>
+);
 
-// ── Explore tiles (unchanged) ─────────────────────────────────────────────
+// ── Explore tiles ─────────────────────────────────────────────────────────────
 const EXPLORE = [
   { label:"Offers",       route:"/offers",      emoji:"🏷️", bg:C.green,    action:false },
   { label:"Play & Win",   route:"/play",        emoji:"🎮", bg:"#512DA8",  action:false },
@@ -420,53 +423,47 @@ const QFS: {id:QF;label:string;bg:string}[] = [
   { id:"healthy",   label:"🥗 Healthy",     bg:C.green },
 ];
 
-// ── NEW: Category pills mapping to existing category IDs ──────────────────
 const QUICK_CATEGORIES = [
-  { id: "cakes",     label: "Pastries", emoji: "🥐" },
-  { id: "healthy",   label: "Healthy",   emoji: "🥗" },
-  { id: "fastfood",  label: "Breakfast", emoji: "🍳" },
-  { id: "fastfood",  label: "Pizza",     emoji: "🍕" },
+  { id:"cakes",    label:"Pastries",  emoji:"🥐" },
+  { id:"healthy",  label:"Healthy",   emoji:"🥗" },
+  { id:"fastfood", label:"Breakfast", emoji:"🍳" },
+  { id:"fastfood", label:"Pizza",     emoji:"🍕" },
 ];
 
-// ══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
 const Home = () => {
-  const navigate = useNavigate();
-  const items     = useCartStore(s => s.items);
-  const cartCount = items.reduce((s,i)=>s+i.quantity, 0);
+  const navigate   = useNavigate();
+  const items      = useCartStore(s => s.items);
+  const cartCount  = items.reduce((s,i)=>s+i.quantity, 0);
 
-  const [menuOpen, setMenuOpen]               = useState(false);
-  const [searchQuery, setSearchQuery]         = useState("");
-  const [sendFoodOpen, setSendFoodOpen]       = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product|null>(null);
-  const [activeCat, setActiveCat]             = useState("parfait");
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [showHealthy, setShowHealthy]         = useState(false);
-  const [activeQF, setActiveQF]               = useState<Set<QF>>(new Set());
-  const [isListening, setIsListening]         = useState(false);
-  const [recognition, setRecognition]         = useState<any>(null);
-  const [userName, setUserName]               = useState<string|null>(null);
-  const [filterTab, setFilterTab]             = useState("Sort By");
-  const [filters, setFilters]                 = useState({
+  const [menuOpen,          setMenuOpen]          = useState(false);
+  const [searchQuery,       setSearchQuery]       = useState("");
+  const [sendFoodOpen,      setSendFoodOpen]      = useState(false);
+  const [selectedProduct,   setSelectedProduct]   = useState<Product|null>(null);
+  const [activeCat,         setActiveCat]         = useState("parfait");
+  const [showFilterModal,   setShowFilterModal]   = useState(false);
+  const [showHealthy,       setShowHealthy]       = useState(false);
+  const [activeQF,          setActiveQF]          = useState<Set<QF>>(new Set());
+  const [isListening,       setIsListening]       = useState(false);
+  const [recognition,       setRecognition]       = useState<any>(null);
+  const [userName,          setUserName]          = useState<string|null>(null);
+  const [filterTab,         setFilterTab]         = useState("Sort By");
+  const [activePageFilter,  setActivePageFilter]  = useState<"All"|"Restaurants">("All");
+  const [filters, setFilters] = useState({
     sortBy:"Relevance", time:null as string|null, rating:null as number|null,
     offers:[] as string[], priceRange:[0,50000], trust:[] as string[],
   });
-
-  // New state for the active filter (only "All" or "Restaurants" – the ones that stay on page)
-  const [activePageFilter, setActivePageFilter] = useState<"All" | "Restaurants">("All");
-
   const [vendorPickModal, setVendorPickModal] = useState<{
-    open: boolean;
-    catLabel: string;
-    vendorNames: string[];
+    open:boolean; catLabel:string; vendorNames:string[];
   }>({ open:false, catLabel:"", vendorNames:[] });
 
-  const [bannerIdx, setBannerIdx]       = useState(0);
+  const [bannerIdx,    setBannerIdx]    = useState(0);
   const [bannerPaused, setBannerPaused] = useState(false);
   useEffect(()=>{
     if (bannerPaused) return;
     const id = setInterval(()=>setBannerIdx(p=>(p+1)%BANNERS.length), 5000);
     return ()=>clearInterval(id);
-  }, [bannerPaused]);
+  },[bannerPaused]);
 
   useEffect(()=>{
     const SR=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
@@ -488,37 +485,6 @@ const Home = () => {
       if (data.user?.user_metadata?.full_name)
         setUserName(data.user.user_metadata.full_name.split(" ")[0]);
     });
-  },[]);
-
-  const catScrollRef = useRef<HTMLDivElement>(null);
-  useEffect(()=>{
-    const el = catScrollRef.current;
-    if (!el) return;
-    let startX = 0;
-    let scrollLeft = 0;
-    let isDragging = false;
-
-    const onTouchStart = (e: TouchEvent) => {
-      startX = e.touches[0].pageX - el.offsetLeft;
-      scrollLeft = el.scrollLeft;
-      isDragging = true;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isDragging) return;
-      const x = e.touches[0].pageX - el.offsetLeft;
-      const walk = (x - startX) * 1.2;
-      el.scrollLeft = scrollLeft - walk;
-    };
-    const onTouchEnd = () => { isDragging = false; };
-
-    el.addEventListener("touchstart", onTouchStart, { passive:true });
-    el.addEventListener("touchmove",  onTouchMove,  { passive:true });
-    el.addEventListener("touchend",   onTouchEnd,   { passive:true });
-    return ()=>{
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove",  onTouchMove);
-      el.removeEventListener("touchend",   onTouchEnd);
-    };
   },[]);
 
   const { data:vendorsData=[], isLoading:vl } = useQuery({ queryKey:["vendors"],    queryFn:fetchVendors,   staleTime:300_000 });
@@ -553,19 +519,13 @@ const Home = () => {
 
   const filteredV = useMemo(()=>{
     let vs=[...vendorsQF];
-    // Apply page filter (All or Restaurants)
-    if (activePageFilter === "Restaurants") {
-      vs = vs.filter(v => {
-        const cat = v.store_category?.toLowerCase();
-        return cat === "food" || cat === "restaurant";
-      });
-    }
-    // Other advanced filters
+    if (activePageFilter==="Restaurants")
+      vs=vs.filter(v=>{ const c=v.store_category?.toLowerCase(); return c==="food"||c==="restaurant"; });
     if (filters.rating) vs=vs.filter((v:any)=>(v.rating||5)>=filters.rating!);
     if (filters.time==="Near & Fast") vs=vs.filter((v:any)=>v.delivery_time?parseInt(v.delivery_time)<=30:true);
     vs=vs.filter((v:any)=>(v.min_price||0)<=filters.priceRange[1]);
     return vs;
-  },[vendorsQF, filters, activePageFilter]);
+  },[vendorsQF,filters,activePageFilter]);
 
   const isSearching = searchQuery.trim().length>0;
   const products    = useMemo(()=>{
@@ -583,37 +543,26 @@ const Home = () => {
 
   const handleCatClick = useCallback((catId: string, catName: string) => {
     const vendorNames = CAT_VENDORS[catId] || [];
-    if (vendorNames.length === 0) {
-      toast.info("Coming soon!");
-      return;
-    }
+    if (vendorNames.length === 0) { toast.info("Coming soon!"); return; }
     if (vendorNames.length === 1) {
       const vendor = (vendorsData as any[]).find(v =>
-        v.store_name.toLowerCase().trim() === vendorNames[0].toLowerCase().trim()
+        v.store_name.toLowerCase().trim()===vendorNames[0].toLowerCase().trim()
       );
-      if (vendor) {
-        navigate(`/vendor/${vendor.id}`);
-      } else {
-        toast.error(`${vendorNames[0]} is not available right now.`);
-      }
+      if (vendor) navigate(`/vendor/${vendor.id}`);
+      else toast.error(`${vendorNames[0]} is not available right now.`);
       return;
     }
     setVendorPickModal({ open:true, catLabel:catName, vendorNames });
-  }, [vendorsData, navigate]);
+  },[vendorsData,navigate]);
 
   const handleSubcatClick = useCallback((catId: string, catName: string) => {
     handleCatClick(catId, catName);
-  }, [handleCatClick]);
+  },[handleCatClick]);
 
-  // Handle quick category pill click (navigate to that category)
   const handleQuickCat = (catId: string, label: string) => {
-    const matchingCat = CATS.find(c => c.id === catId);
-    if (matchingCat) {
-      setActiveCat(matchingCat.id);
-      handleCatClick(matchingCat.id, matchingCat.name);
-    } else {
-      toast.info(`Exploring ${label}`);
-    }
+    const matchingCat = CATS.find(c=>c.id===catId);
+    if (matchingCat) { setActiveCat(matchingCat.id); handleCatClick(matchingCat.id, matchingCat.name); }
+    else toast.info(`Exploring ${label}`);
   };
 
   const banner = BANNERS[bannerIdx];
@@ -628,39 +577,32 @@ const Home = () => {
     </div>
   );
 
-  const G = `
-    *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
-    body{background:${C.cream};overflow-x:hidden;}
-    @keyframes mm-spin{to{transform:rotate(360deg)}}
-    @keyframes mm-fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    .hs{
-      overflow-x:scroll!important;
-      -webkit-overflow-scrolling:touch!important;
-      scrollbar-width:none!important;
-      -ms-overflow-style:none!important;
-      touch-action:pan-x!important;
-    }
-    .hs::-webkit-scrollbar{display:none!important;}
-    .hr{
-      display:flex!important;
-      flex-direction:row!important;
-      flex-wrap:nowrap!important;
-      width:max-content!important;
-      align-items:flex-start;
-    }
-  `;
-
   return (
-    <div style={{ minHeight:"100vh",paddingBottom:120,background:C.cream,overflowX:"hidden" }}>
-      <style>{G}</style>
+    <div style={{
+      minHeight: "100vh",
+      // EDGE-TO-EDGE FIX: bottom padding accounts for system nav bar
+      paddingBottom: "calc(120px + env(safe-area-inset-bottom, 0px))",
+      background: C.cream,
+      overflowX: "hidden",
+    }}>
+      {/* Global keyframes only — no layout classes here */}
+      <style>{`
+        @keyframes mm-spin { to { transform: rotate(360deg); } }
+        @keyframes mm-fadeup { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
 
       <SideMenu open={menuOpen} onClose={()=>setMenuOpen(false)} />
 
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <header style={{
-        position:"sticky",top:0,zIndex:30,
-        background:"rgba(250,253,246,0.97)",
-        backdropFilter:"blur(14px)",
-        borderBottom:`1px solid ${C.border}`,
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+        background: "rgba(250,253,246,0.97)",
+        backdropFilter: "blur(14px)",
+        borderBottom: `1px solid ${C.border}`,
+        // EDGE-TO-EDGE FIX: top padding for status bar
+        paddingTop: "env(safe-area-inset-top, 0px)",
       }}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px" }}>
           <button onClick={()=>setMenuOpen(true)}
@@ -686,6 +628,7 @@ const Home = () => {
         </div>
       </header>
 
+      {/* ── SEARCH ─────────────────────────────────────────────────────────── */}
       <div style={{ padding:"10px 14px 4px" }}>
         <div style={{ display:"flex",alignItems:"center",padding:"10px 14px",borderRadius:16,background:C.white,border:`1.5px solid ${C.border}`,boxShadow:"0 1px 6px rgba(27,107,47,0.08)" }}>
           <Search style={{ width:16,height:16,color:C.green,marginRight:10,flexShrink:0 }} />
@@ -710,250 +653,222 @@ const Home = () => {
         )}
       </div>
 
-      {/* ── TOP FILTER ROW with navigation + highlight ──────────────────── */}
-      <div className="hs" style={{ marginTop:8, marginBottom:8, padding:"0 14px" }}>
-        <div className="hr" style={{ gap:16 }}>
-          {/* All */}
-          <button
-            onClick={() => setActivePageFilter("All")}
+      {/* ── TOP FILTER ROW ─────────────────────────────────────────────────── */}
+      <HScroll style={{ marginTop:8, marginBottom:8, paddingLeft:14, paddingRight:14 }}>
+        {[
+          { label:"All",           action:()=>setActivePageFilter("All"),          active: activePageFilter==="All" },
+          { label:"Restaurants",   action:()=>setActivePageFilter("Restaurants"),  active: activePageFilter==="Restaurants" },
+          { label:"Shops",         action:()=>navigate("/shops"),                  active: false },
+          { label:"Pharmacies",    action:()=>navigate("/pharmacies"),             active: false },
+          { label:"Local Markets", action:()=>navigate("/local-markets"),          active: false },
+        ].map(item=>(
+          <button key={item.label} onClick={item.action}
             style={{
-              fontSize:15,
-              fontWeight: activePageFilter === "All" ? 800 : 500,
-              color: activePageFilter === "All" ? C.green : "#666",
-              borderBottom: activePageFilter === "All" ? `2px solid ${C.green}` : "none",
-              paddingBottom:4,
-              background:"transparent",
-              border:"none",
-              cursor:"pointer",
-              whiteSpace:"nowrap",
-            }}
-          >
-            All
+              fontSize:15, fontWeight: item.active ? 800 : 500,
+              color: item.active ? C.green : "#666",
+              borderBottom: item.active ? `2.5px solid ${C.green}` : "2.5px solid transparent",
+              paddingBottom: 4, paddingRight: 16,
+              background:"transparent", border:"none",
+              borderBottomWidth: 2.5,
+              borderBottomStyle: "solid",
+              borderBottomColor: item.active ? C.green : "transparent",
+              cursor:"pointer", whiteSpace:"nowrap",
+            }}>
+            {item.label}
           </button>
-          {/* Restaurants */}
-          <button
-            onClick={() => setActivePageFilter("Restaurants")}
-            style={{
-              fontSize:15,
-              fontWeight: activePageFilter === "Restaurants" ? 800 : 500,
-              color: activePageFilter === "Restaurants" ? C.green : "#666",
-              borderBottom: activePageFilter === "Restaurants" ? `2px solid ${C.green}` : "none",
-              paddingBottom:4,
-              background:"transparent",
-              border:"none",
-              cursor:"pointer",
-              whiteSpace:"nowrap",
-            }}
-          >
-            Restaurants
-          </button>
-          {/* Shops → navigate to /shops */}
-          <button
-            onClick={() => navigate("/shops")}
-            style={{
-              fontSize:15,
-              fontWeight:500,
-              color:"#666",
-              paddingBottom:4,
-              background:"transparent",
-              border:"none",
-              cursor:"pointer",
-              whiteSpace:"nowrap",
-            }}
-          >
-            Shops
-          </button>
-          {/* Pharmacies → navigate to /pharmacies */}
-          <button
-            onClick={() => navigate("/pharmacies")}
-            style={{
-              fontSize:15,
-              fontWeight:500,
-              color:"#666",
-              paddingBottom:4,
-              background:"transparent",
-              border:"none",
-              cursor:"pointer",
-              whiteSpace:"nowrap",
-            }}
-          >
-            Pharmacies
-          </button>
-          {/* Local Markets → navigate to /local-markets */}
-          <button
-            onClick={() => navigate("/local-markets")}
-            style={{
-              fontSize:15,
-              fontWeight:500,
-              color:"#666",
-              paddingBottom:4,
-              background:"transparent",
-              border:"none",
-              cursor:"pointer",
-              whiteSpace:"nowrap",
-            }}
-          >
-            Local Markets
-          </button>
-        </div>
-      </div>
+        ))}
+      </HScroll>
 
-      {/* ── NEW Category pills (Pastries, Healthy, Breakfast, Pizza) ──── */}
-      <div className="hs" style={{ marginBottom:16, padding:"0 14px" }}>
-        <div className="hr" style={{ gap:10 }}>
-          {QUICK_CATEGORIES.map((cat, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleQuickCat(cat.id, cat.label)}
-              style={{
-                display:"flex",
-                alignItems:"center",
-                gap:6,
-                background:C.white,
-                border:`1px solid ${C.border}`,
-                borderRadius:40,
-                padding:"8px 14px",
-                fontSize:12,
-                fontWeight:600,
-                color:C.text,
-                cursor:"pointer",
-                whiteSpace:"nowrap",
-              }}
-            >
-              <span>{cat.emoji}</span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* ── QUICK CATEGORY PILLS ───────────────────────────────────────────── */}
+      <HScroll style={{ marginBottom:16, paddingLeft:14, paddingRight:14 }}>
+        {QUICK_CATEGORIES.map((cat, idx)=>(
+          <button key={idx} onClick={()=>handleQuickCat(cat.id, cat.label)}
+            style={{
+              display:"flex", alignItems:"center", gap:6,
+              background:C.white, border:`1px solid ${C.border}`,
+              borderRadius:40, padding:"8px 14px", marginRight:10,
+              fontSize:12, fontWeight:600, color:C.text,
+              cursor:"pointer", whiteSpace:"nowrap",
+            }}>
+            <span>{cat.emoji}</span>
+            <span>{cat.label}</span>
+          </button>
+        ))}
+      </HScroll>
 
-      {/* ── BANNER (unchanged) ────────────────────────────────────────── */}
+      {/* ── NEW BANNER DESIGN ──────────────────────────────────────────────── */}
+      {/* FIX: No clamp() — fixed font sizes for Android reliability           */}
+      {/* FIX: CTA button is smaller and text-readable                          */}
+      {/* FIX: Text has explicit color + textShadow so it's never invisible     */}
       <div style={{ padding:"0 14px" }}>
         <div
-          style={{ borderRadius:20,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.18)",position:"relative",minHeight:160 }}
+          style={{
+            borderRadius: 20, overflow:"hidden",
+            boxShadow: "0 6px 28px rgba(0,0,0,0.22)",
+            position:"relative",
+            height: 168,
+          }}
           onTouchStart={()=>setBannerPaused(true)}
-          onTouchEnd={()=>setBannerPaused(false)}>
+          onTouchEnd={()=>setBannerPaused(false)}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={banner.id}
-              initial={{opacity:0,x:40}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-40}}
-              transition={{duration:0.32,ease:"easeInOut"}}
+              initial={{ opacity:0, x:40 }}
+              animate={{ opacity:1, x:0 }}
+              exit={{ opacity:0, x:-40 }}
+              transition={{ duration:0.3, ease:"easeInOut" }}
               style={{
-                position:"absolute",inset:0,
-                background:banner.bg,
-                padding:"16px 16px 14px",
-                display:"flex",flexDirection:"column",
-                justifyContent:"space-between",
-              }}>
-              {/* Banner content unchanged (kept as original) */}
-              <svg style={{ position:"absolute",inset:0,width:"100%",height:"100%",opacity:0.06,pointerEvents:"none" }}>
+                position: "absolute", inset: 0,
+                background: banner.bg,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                padding: "14px 16px 14px",
+              }}
+            >
+              {/* Subtle dot pattern */}
+              <svg style={{ position:"absolute",inset:0,width:"100%",height:"100%",opacity:0.05,pointerEvents:"none" }}>
                 <defs>
                   <pattern id={`pp-${banner.id}`} x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-                    <circle cx="2" cy="2" r="1" fill="white"/>
+                    <circle cx="2" cy="2" r="1.2" fill="white"/>
                   </pattern>
                 </defs>
                 <rect width="100%" height="100%" fill={`url(#pp-${banner.id})`}/>
               </svg>
+
+              {/* Glow orb top right */}
               <div style={{
-                position:"absolute",width:100,height:100,right:-10,top:-10,
-                background:`radial-gradient(circle, ${banner.accent}45 0%, transparent 70%)`,
-                filter:"blur(16px)",pointerEvents:"none",
-              }} />
-              {banner.deco.map((d,i)=>(
-                <div key={i} style={{
-                  position:"absolute",left:d.x,top:d.y,
-                  fontSize:d.s,opacity:d.o,
-                  filter:"drop-shadow(0 2px 5px rgba(0,0,0,0.28))",
-                  pointerEvents:"none",userSelect:"none",
-                }}>{d.e}</div>
-              ))}
+                position:"absolute", right:0, top:0, width:90, height:90,
+                background:`radial-gradient(circle, ${banner.accent}50 0%, transparent 70%)`,
+                filter:"blur(18px)", pointerEvents:"none",
+              }}/>
+
+              {/* Right side decorative emoji */}
               <div style={{
-                position:"absolute",right:"4%",bottom:"10%",
-                fontSize:48,opacity:0.16,
-                pointerEvents:"none",userSelect:"none",
-                filter:"drop-shadow(0 3px 8px rgba(0,0,0,0.20))",
-              }}>{banner.icon}</div>
-              <div style={{ position:"relative",zIndex:2,maxWidth:"68%" }}>
+                position:"absolute", right:16, top:"50%",
+                transform:"translateY(-50%)",
+                fontSize:52, opacity:0.18,
+                pointerEvents:"none", userSelect:"none",
+                filter:"drop-shadow(0 3px 8px rgba(0,0,0,0.25))",
+              }}>
+                {banner.topDeco}
+              </div>
+
+              {/* Content */}
+              <div style={{ position:"relative", zIndex:2, maxWidth:"72%" }}>
+                {/* Badge */}
                 <div style={{
-                  display:"inline-flex",alignItems:"center",
-                  borderRadius:99,padding:"2px 8px",marginBottom:8,
-                  background:`${banner.accent}1A`,
-                  border:`1px solid ${banner.accent}45`,
+                  display:"inline-flex", alignItems:"center",
+                  borderRadius:99, padding:"3px 10px", marginBottom:8,
+                  background:`${banner.accent}20`,
+                  border:`1px solid ${banner.accent}50`,
                 }}>
-                  <span style={{ fontSize:9,fontWeight:700,color:banner.accent,letterSpacing:"0.03em" }}>
+                  <span style={{
+                    fontSize:10, fontWeight:800,
+                    color:banner.accent,
+                    letterSpacing:"0.02em",
+                  }}>
                     {banner.badge}
                   </span>
                 </div>
+
+                {/* Title — FIXED 18px, not clamp() */}
                 <p style={{
-                  color:"#fff",fontWeight:900,
-                  fontSize:"clamp(15px,4.5vw,20px)",
-                  lineHeight:1.15,margin:0,
-                  textShadow:`0 0 18px ${banner.accent}55`,
+                  color: "#FFFFFF",
+                  fontWeight: 900,
+                  fontSize: 18,
+                  lineHeight: 1.15,
+                  margin: 0,
+                  textShadow: "0 1px 6px rgba(0,0,0,0.4)",
                 }}>
                   {banner.title}
                 </p>
+
+                {/* Sub — FIXED 13px, gold, clearly visible */}
                 <p style={{
-                  color:banner.accent,fontWeight:700,
-                  fontSize:"clamp(11px,3.4vw,15px)",
-                  lineHeight:1.3,margin:"2px 0 5px",
+                  color: banner.accent,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  lineHeight: 1.3,
+                  margin: "3px 0 6px",
+                  textShadow: "0 1px 4px rgba(0,0,0,0.3)",
                 }}>
                   {banner.sub}
                 </p>
+
+                {/* Desc — FIXED 11px, clearly legible */}
                 <p style={{
-                  color:"rgba(255,255,255,0.70)",
-                  fontSize:10,lineHeight:1.55,margin:0,
+                  color: "rgba(255,255,255,0.82)",
+                  fontSize: 11,
+                  lineHeight: 1.55,
+                  margin: 0,
+                  textShadow: "0 1px 3px rgba(0,0,0,0.3)",
                 }}>
                   {banner.desc}
                 </p>
               </div>
+
+              {/* CTA — SMALLER, cleaner */}
               <motion.button
-                whileTap={{scale:0.93}}
+                whileTap={{ scale:0.92 }}
                 onClick={()=>{ if(banner.action) setSendFoodOpen(true); else if(banner.route) navigate(banner.route); }}
                 style={{
-                  alignSelf:"flex-start",
-                  padding:"6px 14px",
-                  borderRadius:10,
-                  background:banner.accent,
-                  color:C.greenDark,
-                  fontWeight:900,fontSize:11,
-                  border:"none",cursor:"pointer",
-                  boxShadow:`0 3px 12px ${banner.accent}65`,
-                  position:"relative",zIndex:2,
-                  marginTop:8,
-                }}>
-                {banner.cta} →
+                  alignSelf: "flex-start",
+                  padding: "7px 16px",
+                  borderRadius: 10,
+                  background: banner.accent,
+                  color: "#1B2A00",
+                  fontWeight: 900,
+                  fontSize: 12,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: `0 3px 12px ${banner.accent}60`,
+                  position: "relative",
+                  zIndex: 2,
+                  letterSpacing:"0.01em",
+                }}
+              >
+                {banner.cta}
               </motion.button>
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Dots */}
         <div style={{ display:"flex",justifyContent:"center",gap:5,marginTop:8 }}>
           {BANNERS.map((_,i)=>(
             <button key={i} onClick={()=>setBannerIdx(i)} style={{
-              height:5,
-              width: i===bannerIdx ? 18 : 5,
+              height:5, width:i===bannerIdx?18:5,
               borderRadius:99,
-              background: i===bannerIdx ? C.green : C.border,
-              border:"none",cursor:"pointer",padding:0,
+              background:i===bannerIdx?C.green:C.border,
+              border:"none", cursor:"pointer", padding:0,
               transition:"all 0.3s ease",
             }} />
           ))}
         </div>
       </div>
 
-      {/* ── MAIN CONTENT (existing layout, unchanged except price formatting) ── */}
+      {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
       <div style={{ padding:"14px 14px 0" }}>
-        {/* Greeting */}
+
+        {/* Greeting — "50% OFF Today" REMOVED */}
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
           <div>
             <p style={{ fontSize:11,fontWeight:500,color:"#999",margin:0 }}>{getGreeting()} 👋</p>
-            <h2 style={{ fontSize:16,fontWeight:900,color:C.text,margin:0 }}>{userName?`${userName}!`:"Foodie!"}</h2>
-          </div>
-          <div style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:10,background:C.goldLight,border:`1px solid ${C.gold}60` }}>
-            <span style={{ fontSize:10,fontWeight:700,color:C.goldDark }}>50% OFF Today 🔥</span>
+            <h2 style={{ fontSize:16,fontWeight:900,color:C.text,margin:0 }}>
+              {userName ? `${userName}!` : "Foodie!"}
+            </h2>
           </div>
         </div>
 
-        {/* Categories (existing horizontal scroll) */}
+        {/* ── CATEGORIES ─────────────────────────────────────────────────────
+            FIX: Now uses CategoryScroll component which has:
+            - Pure CSS native scroll (no JS touch override)
+            - Inline styles only (reliable in Android WebView)
+            - No negative margins
+            - minWidth:max-content inner row
+        ────────────────────────────────────────────────────────────────────── */}
         <div style={{ marginBottom:16 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
             <h2 style={{ fontSize:14,fontWeight:900,color:C.text,margin:0 }}>Categories</h2>
@@ -961,97 +876,58 @@ const Home = () => {
               All {CATS.length}
             </span>
           </div>
-          <div
-            ref={catScrollRef}
-            className="hs"
-            style={{
-              overflowX:"scroll",
-              WebkitOverflowScrolling:"touch",
-              touchAction:"pan-x",
-              marginLeft:-14,
-              marginRight:-14,
-              paddingLeft:14,
-              paddingRight:14,
-            }}>
-            <div className="hr" style={{ gap:10, paddingBottom:8 }}>
-              {CATS.map(cat=>{
-                const isActive = activeCat===cat.id;
-                return (
-                  <div
-                    key={cat.id}
-                    onClick={()=>{ setActiveCat(cat.id); handleCatClick(cat.id, cat.name); }}
-                    style={{
-                      display:"flex",flexDirection:"column",alignItems:"center",gap:6,
-                      minWidth:64,maxWidth:64,flexShrink:0,cursor:"pointer",
-                      paddingTop:2,
-                    }}>
-                    <CatImg
-                      src={cat.img} fb={cat.fb} alt={cat.name}
-                      emoji={cat.emoji} isActive={isActive} accent={cat.ac}
-                    />
-                    <span style={{
-                      fontSize:10,fontWeight:isActive?700:500,
-                      color:isActive?cat.ac:"#666",
-                      textAlign:"center",lineHeight:1.3,
-                      maxWidth:64,wordBreak:"break-word",display:"block",
-                    }}>
-                      {cat.name}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <CategoryScroll
+            categories={CATS}
+            activeCat={activeCat}
+            onCatClick={(catId, catName) => {
+              setActiveCat(catId);
+              handleCatClick(catId, catName);
+            }}
+          />
         </div>
 
-        {/* Subcategory pills (existing) */}
+        {/* Subcategory pills */}
         {CAT_SUBCATS[activeCat]?.length>0 && (
-          <div className="hs"
-            style={{ overflowX:"scroll",WebkitOverflowScrolling:"touch",touchAction:"pan-x",marginLeft:-14,marginRight:-14,paddingLeft:14,paddingRight:14,marginBottom:14 }}>
-            <div className="hr" style={{ gap:8,paddingBottom:4 }}>
-              {CAT_SUBCATS[activeCat].map(sub=>(
-                <button key={sub}
-                  onClick={()=>handleSubcatClick(activeCat, CATS.find(c=>c.id===activeCat)?.name||sub)}
-                  style={{
-                    fontSize:11,fontWeight:600,whiteSpace:"nowrap",
-                    padding:"7px 14px",borderRadius:99,
-                    background:C.white,border:`1.5px solid ${C.border}`,
-                    color:"#444",cursor:"pointer",flexShrink:0,
-                    boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
-                  }}>
-                  {sub}
-                </button>
-              ))}
-            </div>
-          </div>
+          <HScroll style={{ marginLeft:-14, marginRight:-14, paddingLeft:14, paddingRight:14, marginBottom:14 }}>
+            {CAT_SUBCATS[activeCat].map(sub=>(
+              <button key={sub}
+                onClick={()=>handleSubcatClick(activeCat, CATS.find(c=>c.id===activeCat)?.name||sub)}
+                style={{
+                  fontSize:11,fontWeight:600,whiteSpace:"nowrap",
+                  padding:"7px 14px",borderRadius:99,marginRight:8,
+                  background:C.white, border:`1.5px solid ${C.border}`,
+                  color:"#444", cursor:"pointer",
+                  boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
+                }}>
+                {sub}
+              </button>
+            ))}
+          </HScroll>
         )}
 
-        {/* Quick filters (existing) */}
-        <div className="hs"
-          style={{ overflowX:"scroll",WebkitOverflowScrolling:"touch",touchAction:"pan-x",marginLeft:-14,marginRight:-14,paddingLeft:14,paddingRight:14,marginBottom:14 }}>
-          <div className="hr" style={{ gap:8,paddingBottom:4 }}>
-            {QFS.map(({id,label,bg})=>{
-              const on=activeQF.has(id);
-              return (
-                <button key={id} onClick={()=>toggleQF(id)}
-                  style={{
-                    padding:"8px 14px",borderRadius:12,fontSize:12,fontWeight:700,
-                    flexShrink:0,cursor:"pointer",
-                    background:on?bg:C.white,color:on?"#fff":"#444",
-                    border:`1.5px solid ${on?bg:C.border}`,
-                    boxShadow:on?`0 2px 10px ${bg}50`:"0 1px 4px rgba(0,0,0,0.05)",
-                    transition:"all 0.18s ease",
-                  }}>
-                  {label}
-                </button>
-              );
-            })}
-            <button onClick={()=>setShowFilterModal(true)}
-              style={{ padding:"8px 12px",borderRadius:12,fontSize:12,fontWeight:700,flexShrink:0,cursor:"pointer",background:C.green100,color:C.green,border:`1.5px solid ${C.border}`,display:"flex",alignItems:"center",gap:5 }}>
-              <Filter style={{ width:12,height:12 }} /> More
-            </button>
-          </div>
-        </div>
+        {/* Quick filters */}
+        <HScroll style={{ marginLeft:-14, marginRight:-14, paddingLeft:14, paddingRight:14, marginBottom:14 }}>
+          {QFS.map(({id,label,bg})=>{
+            const on=activeQF.has(id);
+            return (
+              <button key={id} onClick={()=>toggleQF(id)}
+                style={{
+                  padding:"8px 14px", borderRadius:12, fontSize:12, fontWeight:700,
+                  marginRight:8, cursor:"pointer",
+                  background:on?bg:C.white, color:on?"#fff":"#444",
+                  border:`1.5px solid ${on?bg:C.border}`,
+                  boxShadow:on?`0 2px 10px ${bg}50`:"0 1px 4px rgba(0,0,0,0.05)",
+                  transition:"all 0.18s ease", whiteSpace:"nowrap",
+                }}>
+                {label}
+              </button>
+            );
+          })}
+          <button onClick={()=>setShowFilterModal(true)}
+            style={{ padding:"8px 12px",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",background:C.green100,color:C.green,border:`1.5px solid ${C.border}`,display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap" }}>
+            <Filter style={{ width:12,height:12 }} /> More
+          </button>
+        </HScroll>
 
         <AnimatePresence>
           {activeQF.size>0 && (
@@ -1066,7 +942,7 @@ const Home = () => {
           )}
         </AnimatePresence>
 
-        {/* Recommended vendors (now respects activePageFilter) */}
+        {/* Recommended vendors */}
         <section style={{ marginBottom:24 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
             <h2 style={{ fontSize:14,fontWeight:900,color:C.text,margin:0,display:"flex",alignItems:"center",gap:6 }}>
@@ -1084,10 +960,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* The rest of the sections (Explore More, Popular Near You, Mira Picks, Today's Hot Picks, Popular Items) remain unchanged except price formatting */}
-        {/* We'll keep them exactly as you had, just ensure price formatting uses formatPrice where applicable */}
-        {/* For brevity, I'll copy the remaining unchanged sections. */}
-
+        {/* Explore More */}
         <section style={{ marginBottom:24 }}>
           <h2 style={{ fontSize:14,fontWeight:900,color:C.text,marginBottom:12 }}>EXPLORE MORE</h2>
           <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10 }}>
@@ -1104,6 +977,7 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Popular Near You */}
         <section style={{ marginBottom:24 }}>
           <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
             <div style={{ width:28,height:28,borderRadius:10,background:C.green,display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -1139,6 +1013,7 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Mira Picks */}
         {miraPicks.length>0 && (
           <section style={{ marginBottom:24 }}>
             <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
@@ -1148,21 +1023,19 @@ const Home = () => {
               <h3 style={{ fontSize:14,fontWeight:900,color:C.text,margin:0 }}>Mira Picks for You</h3>
               <span style={{ fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:99,background:C.goldLight,color:C.goldDark,border:`1px solid ${C.gold}60` }}>AI Curated</span>
             </div>
-            <div className="hs"
-              style={{ overflowX:"scroll",WebkitOverflowScrolling:"touch",touchAction:"pan-x",marginLeft:-14,marginRight:-14,paddingLeft:14,paddingRight:14 }}>
-              <div className="hr" style={{ gap:10,paddingBottom:8 }}>
-                {miraPicks.map((item:any,i:number)=>(
-                  <div key={item.id} style={{ minWidth:138,flexShrink:0 }}>
-                    <ProductCard product={item} index={i} showVendor={true} onClick={()=>setSelectedProduct(item)} />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HScroll style={{ marginLeft:-14, marginRight:-14, paddingLeft:14, paddingRight:14 }}>
+              {miraPicks.map((item:any,i:number)=>(
+                <div key={item.id} style={{ minWidth:138, flexShrink:0, marginRight:10 }}>
+                  <ProductCard product={item} index={i} showVendor={true} onClick={()=>setSelectedProduct(item)} />
+                </div>
+              ))}
+            </HScroll>
           </section>
         )}
 
         <TodayObsession />
 
+        {/* Today's Hot Picks */}
         {allVendors.length>0 && (
           <section style={{ marginBottom:24 }}>
             <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
@@ -1202,6 +1075,7 @@ const Home = () => {
           </section>
         )}
 
+        {/* Popular Items */}
         <section style={{ marginBottom:24 }}>
           <h2 style={{ fontSize:14,fontWeight:900,color:C.text,marginBottom:12 }}>
             {isSearching ? `🔍 "${searchQuery}"` : "🍽️ Popular Items"}
@@ -1229,69 +1103,68 @@ const Home = () => {
 
       <BottomNav />
 
+      {/* Floating Cart button — EDGE-TO-EDGE FIX: bottom accounts for system nav */}
       <AnimatePresence>
         {cartCount>0 && (
           <motion.button initial={{scale:0,y:20}} animate={{scale:1,y:0}} exit={{scale:0,y:20}} whileTap={{scale:0.95}}
             onClick={()=>navigate("/cart")}
-            style={{ position:"fixed",bottom:80,right:14,zIndex:50,display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:99,background:C.green,color:"#fff",fontWeight:900,fontSize:12,border:"none",cursor:"pointer",boxShadow:`0 4px 20px ${C.green}60` }}>
+            style={{
+              position:"fixed",
+              bottom:"calc(80px + env(safe-area-inset-bottom, 0px))",
+              right:14,
+              zIndex:50,
+              display:"flex",alignItems:"center",gap:8,
+              padding:"10px 18px",borderRadius:99,
+              background:C.green,color:"#fff",fontWeight:900,fontSize:12,
+              border:"none",cursor:"pointer",
+              boxShadow:`0 4px 20px ${C.green}60`,
+            }}>
             <ShoppingCart style={{ width:14,height:14 }} />Cart ({cartCount})
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Healthy FAB (unchanged) */}
-      <button 
+      {/* Healthy FAB — EDGE-TO-EDGE FIX */}
+      <button
         onClick={() => setShowHealthy(true)}
         style={{
           position: "fixed",
           bottom: "calc(80px + env(safe-area-inset-bottom, 0px))",
           left: "max(14px, env(safe-area-inset-left, 14px))",
           zIndex: 50,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          width: 56, height: 56, borderRadius: 28,
           background: `linear-gradient(135deg, ${C.green}, ${C.greenMid})`,
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          border: "none", cursor: "pointer",
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
           boxShadow: `0 6px 20px ${C.green}80`,
-          transform: "translateZ(0)",
-          WebkitTransform: "translateZ(0)",
-          transition: "transform 0.2s ease, box-shadow 0.2s ease",
         }}
         onTouchStart={(e) => { e.currentTarget.style.transform = "scale(0.94)"; }}
-        onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+        onTouchEnd={(e)   => { e.currentTarget.style.transform = "scale(1)"; }}
       >
-        <Leaf style={{ width: 20, height: 20, color: "#fff" }} />
-        <span style={{ fontSize: 8, color: "#fff", fontWeight: 900, marginTop: 2 }}>
-          Healthy
-        </span>
+        <Leaf style={{ width:20,height:20,color:"#fff" }} />
+        <span style={{ fontSize:8,color:"#fff",fontWeight:900,marginTop:2 }}>Healthy</span>
       </button>
 
-      {/* Vendor Picker Modal (unchanged) */}
+      {/* Vendor Picker Modal */}
       <AnimatePresence>
         {vendorPickModal.open && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
             style={{ position:"fixed",inset:0,zIndex:60,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"flex-end",justifyContent:"center" }}
             onClick={()=>setVendorPickModal({...vendorPickModal,open:false})}>
             <motion.div initial={{y:"100%"}} animate={{y:0}} exit={{y:"100%"}} transition={{type:"spring",damping:28}}
-              style={{ width:"100%",maxWidth:480,background:C.white,borderRadius:"20px 20px 0 0",padding:"20px 16px 32px" }}
+              style={{
+                width:"100%",maxWidth:480,background:C.white,
+                borderRadius:"20px 20px 0 0",
+                padding:"20px 16px",
+                paddingBottom:"calc(32px + env(safe-area-inset-bottom, 0px))",
+              }}
               onClick={e=>e.stopPropagation()}>
               <div style={{ width:36,height:4,borderRadius:99,background:"#ddd",margin:"0 auto 16px" }} />
-              <h3 style={{ fontSize:15,fontWeight:900,color:C.text,marginBottom:4,textAlign:"center" }}>
-                {vendorPickModal.catLabel}
-              </h3>
-              <p style={{ fontSize:12,color:"#888",textAlign:"center",marginBottom:18 }}>
-                Choose a vendor to browse their menu
-              </p>
+              <h3 style={{ fontSize:15,fontWeight:900,color:C.text,marginBottom:4,textAlign:"center" }}>{vendorPickModal.catLabel}</h3>
+              <p style={{ fontSize:12,color:"#888",textAlign:"center",marginBottom:18 }}>Choose a vendor to browse their menu</p>
               <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
                 {vendorPickModal.vendorNames.map(vName=>{
-                  const vendor = (vendorsData as any[]).find(v=>
-                    v.store_name.toLowerCase().trim()===vName.toLowerCase().trim()
-                  );
+                  const vendor=(vendorsData as any[]).find(v=>v.store_name.toLowerCase().trim()===vName.toLowerCase().trim());
                   return (
                     <button key={vName}
                       onClick={()=>{
@@ -1324,7 +1197,7 @@ const Home = () => {
         )}
       </AnimatePresence>
 
-      {/* Healthy Modal (unchanged) */}
+      {/* Healthy Modal */}
       <AnimatePresence>
         {showHealthy && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
@@ -1358,7 +1231,7 @@ const Home = () => {
         )}
       </AnimatePresence>
 
-      {/* Filter Modal (unchanged) */}
+      {/* Filter Modal */}
       <AnimatePresence>
         {showFilterModal && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
@@ -1391,7 +1264,7 @@ const Home = () => {
                   {filterTab==="Trust"   && TRUST_O.map(o=><label key={o} style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 0",fontSize:12,cursor:"pointer" }}><input type="checkbox" checked={filters.trust.includes(o)} onChange={e=>setFilters({...filters,trust:e.target.checked?[...filters.trust,o]:filters.trust.filter(x=>x!==o)})} style={{ accentColor:C.green }} /><span style={{ fontWeight:500,color:"#555" }}>{o}</span></label>)}
                 </div>
               </div>
-              <div style={{ padding:12,borderTop:`1px solid ${C.border}`,display:"flex",gap:10 }}>
+              <div style={{ padding:12,borderTop:`1px solid ${C.border}`,display:"flex",gap:10,paddingBottom:"calc(12px + env(safe-area-inset-bottom, 0px))" }}>
                 <button onClick={()=>{ setFilters({sortBy:"Relevance",time:null,rating:null,offers:[],priceRange:[0,50000],trust:[]}); setShowFilterModal(false); }} style={{ flex:1,padding:"10px 0",borderRadius:12,fontSize:12,fontWeight:900,background:C.green100,color:C.green,border:"none",cursor:"pointer" }}>Reset All</button>
                 <button onClick={()=>setShowFilterModal(false)} style={{ flex:1,padding:"10px 0",borderRadius:12,fontSize:12,fontWeight:900,background:C.green,color:"#fff",border:"none",cursor:"pointer" }}>Apply</button>
               </div>

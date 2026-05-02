@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,17 +9,10 @@ import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 
-// Import all your pages (keep as they were)
-import Index from "./pages/Index";
+// Page imports
 import Splash from "./pages/Splash";
-import WelcomeScreen from "./pages/WelcomeScreen";
 import Welcome from "./pages/Welcome";
-import OnboardingPhoneLogin from "./pages/OnboardingPhoneLogin";
-import OnboardingEmail from "./pages/OnboardingEmail";
-import OnboardingPhone from "./pages/OnboardingPhone";
-import OnboardingPassword from "./pages/OnboardingPassword";
-import OnboardingLocation from "./pages/OnboardingLocation";
-import OnboardingNotifications from "./pages/OnboardingNotifications";
+import OnboardingSignup from "./pages/OnboardingSignup";
 import Location from "./pages/Location";
 import Home from "./pages/Home";
 import VendorDetail from "./pages/VendorDetail";
@@ -30,7 +23,6 @@ import Cart from "./pages/Cart";
 import OrderSuccess from "./pages/OrderSuccess";
 import OrderTracking from "./pages/OrderTracking";
 import Rewards from "./pages/Rewards";
-import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import InviteFriend from "./pages/InviteFriend";
 import Settings from "./pages/Settings";
@@ -45,8 +37,6 @@ import Collections from "./pages/Collections";
 import CollectionDetail from "./pages/CollectionDetail";
 import PlayAndWin from "./pages/PlayAndWin";
 import HealthyChallenge from "./pages/HealthyChallenge";
-
-// NEW page imports for shops, pharmacies, local markets
 import ShopPage from "./pages/ShopPage";
 import PharmaciesPage from "./pages/PharmaciesPage";
 import LocalMarketsPage from "./pages/LocalMarketsPage";
@@ -76,49 +66,30 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
     },
   },
 });
 
-// Component that initializes push notifications for the logged-in user
 function PushNotificationInitializer() {
   const [userId, setUserId] = useState<string | undefined>();
   const [initAttempted, setInitAttempted] = useState(false);
 
   useEffect(() => {
-    // Log platform info on mount
-    const platform = Capacitor.getPlatform();
-    const isNative = Capacitor.isNativePlatform();
-    console.log(`📱 App running on: ${platform} (Native: ${isNative})`);
-    
-    if (isPushSupported()) {
-      console.log(`✅ Push notifications supported on ${getPushPlatform()}`);
-    } else {
-      console.log('⚠️ Push notifications not supported on this platform');
-    }
-  }, []);
-
-  useEffect(() => {
-    // Get user session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const newUserId = session?.user?.id;
       setUserId(newUserId);
-      
       if (newUserId && !initAttempted) {
         console.log('👤 User authenticated, initializing push notifications...');
         setInitAttempted(true);
       }
     };
-    
     getSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const newUserId = session?.user?.id;
       setUserId(newUserId);
-      
       if (newUserId && !initAttempted) {
         console.log('👤 Auth state changed, initializing push notifications...');
         setInitAttempted(true);
@@ -128,64 +99,52 @@ function PushNotificationInitializer() {
     return () => subscription.unsubscribe();
   }, [initAttempted]);
 
-  // Initialize push notifications (works on Android, iOS, and Web)
   useCapacitorPushNotifications(userId);
-  
   return null;
 }
 
-// Component to handle push notification navigation
 function PushNotificationNavigation() {
   useEffect(() => {
     const handleNavigateToOrder = (event: CustomEvent) => {
       const { orderId } = event.detail;
-      console.log('🔗 Navigating to order:', orderId);
-      
-      // Use window.location for web, or find a better way for React Router
-      // This will work on all platforms
       if (window.location.pathname !== `/order-tracking?order_id=${orderId}`) {
         window.location.href = `/order-tracking?order_id=${orderId}`;
       }
     };
-
     window.addEventListener('navigate-to-order', handleNavigateToOrder as EventListener);
-    
-    return () => {
-      window.removeEventListener('navigate-to-order', handleNavigateToOrder as EventListener);
-    };
+    return () => window.removeEventListener('navigate-to-order', handleNavigateToOrder as EventListener);
   }, []);
-
   return null;
 }
 
 function AppContent() {
-  // Initialize Android back button handling
   useAndroidBackButton();
-
   return (
     <>
       <PushNotificationInitializer />
       <PushNotificationNavigation />
       <Routes>
-        {/* ===== SPLASH & WELCOME ===== */}
         <Route path="/" element={<Splash />} />
         <Route path="/splash" element={<Splash />} />
         <Route path="/welcome" element={<Welcome />} />
 
-        {/* ===== ONBOARDING FLOW ===== */}
-        <Route path="/onboarding/phone-login" element={<OnboardingPhoneLogin />} />
-        <Route path="/onboarding/email" element={<OnboardingEmail />} />
-        <Route path="/onboarding/password" element={<OnboardingPassword />} />
-        <Route path="/onboarding/location" element={<OnboardingLocation />} />
-        <Route path="/onboarding/notifications" element={<OnboardingNotifications />} />
-        <Route path="/onboarding/phone" element={<OnboardingPhone />} />
+        {/* Onboarding */}
+        <Route path="/onboarding/signup" element={<OnboardingSignup />} />
+        <Route path="/onboarding/email" element={<OnboardingSignup />} />
+        <Route path="/onboarding/password" element={<OnboardingSignup />} />
 
-        {/* ===== AUTH ROUTES ===== */}
+        {/* Redirect old onboarding routes */}
+        <Route path="/onboarding/phone-login" element={<Navigate to="/onboarding/signup" replace />} />
+        <Route path="/onboarding/phone" element={<Navigate to="/onboarding/signup" replace />} />
+        <Route path="/onboarding/location" element={<Navigate to="/onboarding/signup" replace />} />
+        <Route path="/onboarding/notifications" element={<Navigate to="/onboarding/signup" replace />} />
+
+        {/* Auth */}
         <Route path="/location" element={<Location />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/signup" element={<Navigate to="/onboarding/signup" replace />} />
         <Route path="/login" element={<Login />} />
 
-        {/* ===== MAIN APP ROUTES ===== */}
+        {/* Main app */}
         <Route path="/home" element={<Home />} />
         <Route path="/vendor/:id" element={<VendorDetail />} />
         <Route path="/orders" element={<Orders />} />
@@ -200,32 +159,24 @@ function AppContent() {
         <Route path="/support" element={<Support />} />
         <Route path="/mira-ai" element={<MiraAIPage />} />
 
-        {/* ===== GIFT CARD ROUTES ===== */}
+        {/* Gift cards & Party */}
         <Route path="/gift-cards" element={<GiftCards />} />
         <Route path="/gift-card-success" element={<GiftCardSuccess />} />
-
-        {/* ===== PARTY PLANNING ROUTE ===== */}
         <Route path="/party" element={<PlanAParty />} />
 
-        {/* ===== OFFERS & DEALS ROUTE ===== */}
+        {/* Offers, Collections, Games */}
         <Route path="/offers" element={<Offers />} />
-
-        {/* ===== COLLECTIONS ROUTES ===== */}
         <Route path="/collections" element={<Collections />} />
         <Route path="/collection/:id" element={<CollectionDetail />} />
-
-        {/* ===== PLAY & WIN GAME ROUTE ===== */}
         <Route path="/play" element={<PlayAndWin />} />
-
-        {/* ===== HEALTHY CHALLENGE ROUTE ===== */}
         <Route path="/healthy-challenge" element={<HealthyChallenge />} />
 
-        {/* ===== NEW ROUTES FOR SHOPS, PHARMACIES, LOCAL MARKETS ===== */}
+        {/* Shops, pharmacies, markets */}
         <Route path="/shops" element={<ShopPage />} />
         <Route path="/pharmacies" element={<PharmaciesPage />} />
         <Route path="/local-markets" element={<LocalMarketsPage />} />
 
-        {/* ===== ADMIN ROUTES ===== */}
+        {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />
@@ -240,29 +191,32 @@ function AppContent() {
           <Route path="settings" element={<AdminSettings />} />
         </Route>
 
-        {/* ===== RIDER ROUTES ===== */}
+        {/* Rider */}
         <Route path="/rider/login" element={<RiderLogin />} />
         <Route path="/rider/dashboard" element={<RiderDashboard />} />
         <Route path="/rider/history" element={<RiderHistory />} />
         <Route path="/rider/earnings" element={<RiderEarnings />} />
 
-        {/* ===== 404 NOT FOUND ===== */}
+        {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-center" richColors closeButton />
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+// ✅ ENSURE DEFAULT EXPORT
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner position="top-center" richColors closeButton />
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
