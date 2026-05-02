@@ -1,6 +1,14 @@
 // src/pages/Cart.tsx
-// ✅ FULLY FIXED ADDRESS SYSTEM – Everything else preserved
-import { useState, useMemo, useEffect, useRef } from "react";
+// ✅ FINAL PRODUCTION VERSION
+// - Fixed debounce & re‑render storm
+// - Safe async with isMounted guard
+// - Batched DistanceMatrix calls
+// - Single address UI state machine
+// - Memoized subtotal & service charge
+// - Resilient Google Maps init
+// - Address normalization for Lagos
+
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   ArrowLeft, ShoppingCart, CreditCard, Wallet, Truck, Store,
   MessageSquare, Loader2, MapPin, Navigation, X, Info, AlertTriangle
@@ -42,6 +50,36 @@ function getTieredDeliveryFee(distanceKm: number): number {
   return FALLBACK_FEE_PER_VENDOR;
 }
 
+// ---------- LAGOS SMART SUGGESTIONS (offline fallback) ----------
+const LAGOS_SUGGESTIONS = [
+  "Lekki Phase 1, Lagos",
+  "Lekki Phase 2, Lagos",
+  "Victoria Island, Lagos",
+  "Ikoyi, Lagos",
+  "Yaba, Lagos",
+  "Surulere, Lagos",
+  "Ikeja, Lagos",
+  "Gbagada, Lagos",
+  "Maryland, Lagos",
+  "Ajah, Lagos",
+  "Sangotedo, Lagos",
+  "Magodo, Lagos",
+  "Ogba, Lagos",
+  "Agege, Lagos",
+  "Badagry, Lagos",
+  "Epe, Lagos",
+  "Ikorodu, Lagos",
+];
+
+// Normalize user input (append Lagos)
+const normalizeAddress = (input: string) => {
+  const trimmed = input.trim();
+  if (trimmed.toLowerCase().includes("lagos")) return trimmed;
+  return `${trimmed}, Lagos, Nigeria`;
+};
+
+type AddressUIState = "idle" | "loading" | "google_suggestions" | "lagos_fallback";
+
 const Cart = () => {
   const navigate = useNavigate();
   const {
@@ -64,13 +102,15 @@ const Cart = () => {
   const [tipAmount, setTipAmount] = useState(0);
   const tipOptions = [0, 200, 500, 1000];
 
-  // ✅ ADDRESS STATE (improved)
+  // Address UI state machine
+  const [addressUI, setAddressUI] = useState<AddressUIState>("idle");
   const [addressInput, setAddressInput] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const autocompleteService = useRef<any>(null);
-  const placesService = useRef<any>(null);       // ← Direct lat/lng without extra geocode
+  const placesService = useRef<any>(null);
+  const geocoder = useRef<any>(null);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const isMounted = useRef(true);
 
   const [deliveryUnavailable, setDeliveryUnavailable] = useState(false);
   const [farVendors, setFarVendors] = useState<string[]>([]);
@@ -92,13 +132,16 @@ const Cart = () => {
 
   const vendorNames = Object.keys(vendorGroups);
   const finalDeliveryFee = deliveryFee;
-  const serviceCharge = subtotal() * SERVICE_CHARGE_RATE;
-  const total = subtotal() + serviceCharge + tipAmount;
 
-  const hasBeautyItems = items.some(i => i.product.category === "beauty");
-  const beautyTotal = items.filter(i => i.product.category === "beauty").reduce((s, i) => s + i.product.price * i.quantity, 0);
+  // Memoize derived totals to avoid recalculation on every render
+  const subtotalAmount = useMemo(() => subtotal(), [subtotal]);
+  const serviceCharge = useMemo(() => subtotalAmount * SERVICE_CHARGE_RATE, [subtotalAmount]);
+  const total = useMemo(() => subtotalAmount + serviceCharge + tipAmount, [subtotalAmount, serviceCharge, tipAmount]);
+
+  const hasBeautyItems = useMemo(() => items.some(i => i.product.category === "beauty"), [items]);
+  const beautyTotal = useMemo(() => items.filter(i => i.product.category === "beauty").reduce((s, i) => s + i.product.price * i.quantity, 0), [items]);
   const showInstallment = hasBeautyItems && beautyTotal > 50000;
-  const installmentMinimum = Math.ceil(total * 0.25);
+  const installmentMinimum = useMemo(() => Math.ceil(total * 0.25), [total]);
 
   function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371;
@@ -111,34 +154,47 @@ const Cart = () => {
     return R * c;
   }
 
-  // Initialize Google services
+  // ---------- SAFE GOOGLE MAPS INIT (no race, no memory leak) ----------
   useEffect(() => {
+    isMounted.current = true;
+    let intervalId: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+
     const initServices = () => {
-      if (!window.google?.maps) return;
-      setDistanceMatrixService(new window.google.maps.DistanceMatrixService());
-      setGoogleMapsLoaded(true);
-      if (window.google.maps.places) {
+      if (!window.google?.maps?.places?.AutocompleteService) return false;
+      if (!distanceMatrixService && window.google.maps.DistanceMatrixService) {
+        setDistanceMatrixService(new window.google.maps.DistanceMatrixService());
+      }
+      if (!autocompleteService.current) {
         autocompleteService.current = new window.google.maps.places.AutocompleteService();
-        // ✅ Create a dummy div for PlacesService (required)
+      }
+      if (!geocoder.current) {
+        geocoder.current = new window.google.maps.Geocoder();
+      }
+      if (!placesService.current) {
         placesService.current = new window.google.maps.places.PlacesService(document.createElement("div"));
       }
+      if (!googleMapsLoaded) setGoogleMapsLoaded(true);
+      return true;
     };
-    if (window.google?.maps?.places) {
-      initServices();
-      return;
-    }
-    window.addEventListener("google-maps-loaded", initServices);
-    const poll = setInterval(() => {
-      if (window.google?.maps?.places) {
-        clearInterval(poll);
-        initServices();
-      }
+
+    if (initServices()) return;
+
+    intervalId = setInterval(() => {
+      if (initServices() && intervalId) clearInterval(intervalId);
     }, 300);
-    const timeout = setTimeout(() => clearInterval(poll), 10000);
+    timeoutId = setTimeout(() => {
+      if (intervalId) clearInterval(intervalId);
+      if (!googleMapsLoaded && isMounted.current) {
+        console.warn("Google Places not loaded, using fallback only");
+        toast.info("Address suggestions limited, please use Lagos areas or GPS");
+      }
+    }, 10000);
+
     return () => {
-      window.removeEventListener("google-maps-loaded", initServices);
-      clearInterval(poll);
-      clearTimeout(timeout);
+      isMounted.current = false;
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 
@@ -156,96 +212,129 @@ const Cart = () => {
       });
   }, [vendorNames.join(",")]);
 
-  // ✅ IMPROVED: Fetch suggestions with shorter debounce (200ms)
-  const fetchAddressSuggestions = (input: string) => {
-    if (!input || input.length < 3 || !autocompleteService.current) {
-      setAddressSuggestions([]);
-      setShowSuggestions(false);
+  // ---------- LAYER 1: Places suggestions with debounce and state machine ----------
+  const fetchSuggestions = useCallback((input: string) => {
+    if (!autocompleteService.current || input.length < 3) {
+      if (input.length >= 3 && !autocompleteService.current) {
+        setAddressUI("lagos_fallback");
+      } else {
+        setAddressUI("idle");
+      }
       return;
     }
-    setIsLoadingAddress(true);
+
+    setAddressUI("loading");
+    const timeoutId = setTimeout(() => {
+      if (isMounted.current && addressUI === "loading") {
+        setAddressUI("lagos_fallback");
+        toast.info("Using local address suggestions", { duration: 2000 });
+      }
+    }, 5000);
+
     autocompleteService.current.getPlacePredictions(
       { input, componentRestrictions: { country: "ng" }, types: ["address"] },
       (predictions: any[], status: string) => {
-        setIsLoadingAddress(false);
-        if (status === "OK" && predictions) {
+        clearTimeout(timeoutId);
+        if (!isMounted.current) return;
+        if (status === "OK" && predictions && predictions.length > 0) {
           setAddressSuggestions(predictions);
-          setShowSuggestions(true);
+          setAddressUI("google_suggestions");
         } else {
-          setAddressSuggestions([]);
-          setShowSuggestions(false);
+          setAddressUI("lagos_fallback");
         }
       }
     );
-  };
+  }, [addressUI]);
 
-  // ✅ Faster debounce (200ms instead of 500)
+  // Stable debounce handler
+  const handleAddressInput = useCallback((value: string) => {
+    setAddressInput(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (value.length >= 3) {
+      debounceTimer.current = setTimeout(() => {
+        fetchSuggestions(value);
+      }, 300);
+    } else {
+      setAddressUI("idle");
+      setAddressSuggestions([]);
+    }
+  }, [fetchSuggestions]);
+
+  // Cleanup debounce on unmount
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (addressInput && addressInput !== customerAddress) {
-        fetchAddressSuggestions(addressInput);
-      } else if (!addressInput) {
-        setAddressSuggestions([]);
-        setShowSuggestions(false);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
+
+  // ---------- ADDRESS RESOLUTION (Geocoding) ----------
+  const resolveAddressViaGeocoder = useCallback((address: string, showToast = true) => {
+    if (!geocoder.current) {
+      toast.error("Address service not ready. Use GPS.");
+      return;
+    }
+    setAddressUI("loading");
+    const fullAddress = normalizeAddress(address);
+    geocoder.current.geocode(
+      { address: fullAddress },
+      (results: any[], status: string) => {
+        if (!isMounted.current) return;
+        setAddressUI("idle");
+        if (status === "OK" && results && results[0]) {
+          const loc = results[0].geometry.location;
+          const formatted = results[0].formatted_address;
+          setCustomerAddress(formatted);
+          setCustomerLatLng({ lat: loc.lat(), lng: loc.lng() });
+          setAddressInput(formatted);
+          if (showToast) toast.success("Address found!");
+        } else {
+          toast.error("Could not locate that address. Try GPS or a known area.");
+        }
       }
-    }, 200);
-    return () => clearTimeout(t);
-  }, [addressInput]);
+    );
+  }, []);
 
-  // ✅ 🔥 INSTANT ADDRESS SELECTION – no extra geocode call
-  const handleSelectAddress = (suggestion: any) => {
+  const handleLagosSuggestion = useCallback((suggestion: string) => {
+    setAddressInput(suggestion);
+    resolveAddressViaGeocoder(suggestion, true);
+  }, [resolveAddressViaGeocoder]);
+
+  const handleSelectSuggestion = useCallback((suggestion: any) => {
     setAddressInput(suggestion.description);
-    setCustomerAddress(suggestion.description);
-    setShowSuggestions(false);
-    setAddressSuggestions([]);
-    setIsLoadingAddress(true);
-
-    // Use PlacesService to get lat/lng directly (much faster)
+    setAddressUI("loading");
     if (placesService.current) {
       placesService.current.getDetails(
-        {
-          placeId: suggestion.place_id,
-          fields: ["geometry", "formatted_address"],
-        },
+        { placeId: suggestion.place_id, fields: ["geometry", "formatted_address"] },
         (place: any, status: string) => {
-          setIsLoadingAddress(false);
+          if (!isMounted.current) return;
           if (status === "OK" && place?.geometry?.location) {
             const lat = place.geometry.location.lat();
             const lng = place.geometry.location.lng();
+            setCustomerAddress(place.formatted_address);
             setCustomerLatLng({ lat, lng });
-            toast.success("Address selected! Calculating delivery fee…");
+            setAddressUI("idle");
+            toast.success("Address selected!");
           } else {
-            toast.error("Could not get coordinates for this address. Please try another.");
+            // fallback to geocoding
+            resolveAddressViaGeocoder(suggestion.description, true);
           }
         }
       );
     } else {
-      setIsLoadingAddress(false);
-      toast.error("Address service not ready. Please try again.");
+      resolveAddressViaGeocoder(suggestion.description, true);
     }
-  };
+  }, [resolveAddressViaGeocoder]);
 
-  const geocodeAddress = async (address: string) => {
-    // Fallback – normally not needed because PlacesService gives lat/lng instantly
-    if (!window.google?.maps?.Geocoder) return;
-    setIsLoadingAddress(true);
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ address: address + ", Lagos, Nigeria" }, (results: any, status: string) => {
-      setIsLoadingAddress(false);
-      if (status === "OK" && results[0]) {
-        const loc = results[0].geometry.location;
-        setCustomerAddress(address);
-        setCustomerLatLng({ lat: loc.lat(), lng: loc.lng() });
-        setAddressInput(address);
-        toast.success("Address set! Calculating delivery fee...");
-      } else {
-        toast.error("Could not find that address. Try selecting from suggestions.");
-      }
-    });
-  };
+  const handleManualGeocode = useCallback(() => {
+    if (!addressInput.trim()) {
+      toast.error("Type an address first");
+      return;
+    }
+    resolveAddressViaGeocoder(addressInput, true);
+  }, [addressInput, resolveAddressViaGeocoder]);
 
-  const getCurrentLocation = async () => {
-    setIsLoadingAddress(true);
+  const getCurrentLocation = useCallback(async () => {
+    setAddressUI("loading");
     try {
       let latitude: number, longitude: number;
       if (Capacitor.isNativePlatform()) {
@@ -261,46 +350,48 @@ const Cart = () => {
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
       }
-      if (window.google?.maps?.Geocoder) {
-        const geocoder = new window.google.maps.Geocoder();
-        geocoder.geocode(
+      if (geocoder.current) {
+        geocoder.current.geocode(
           { location: { lat: latitude, lng: longitude } },
           (results: any[], status: string) => {
-            setIsLoadingAddress(false);
+            if (!isMounted.current) return;
+            setAddressUI("idle");
             if (status === "OK" && results[0]) {
               const addr = results[0].formatted_address;
               setAddressInput(addr);
               setCustomerAddress(addr);
               setCustomerLatLng({ lat: latitude, lng: longitude });
-              toast.success("Location detected! Calculating delivery fee…");
+              toast.success("Location detected!");
             } else {
               toast.error("Could not get address from location");
             }
           }
         );
       } else {
-        setIsLoadingAddress(false);
-        toast.error("Address service not ready. Try again in a moment.");
+        throw new Error("Geocoder not ready");
       }
     } catch (err: any) {
-      setIsLoadingAddress(false);
-      if (err.message?.includes("denied")) {
-        toast.error("Location denied. Enable it in Settings → Apps → Miramore → Permissions.");
-      } else {
-        toast.error("Unable to get location. Enter address manually.");
+      if (isMounted.current) {
+        setAddressUI("idle");
+        if (err.message?.includes("denied")) {
+          toast.error("Location denied. Enable it in Settings.");
+        } else {
+          toast.error("Unable to get location. Enter address manually.");
+        }
       }
     }
-  };
+  }, []);
 
-  const clearAddress = () => {
+  const clearAddress = useCallback(() => {
     setAddressInput("");
     setCustomerAddress("");
     setCustomerLatLng(null);
     setDeliveryFee(0);
     setAddressSuggestions([]);
-    setShowSuggestions(false);
-  };
+    setAddressUI("idle");
+  }, []);
 
+  // ---------- VENDOR COORDS ----------
   useEffect(() => {
     const fetchCoords = async () => {
       const coordsMap = new Map();
@@ -327,6 +418,7 @@ const Cart = () => {
     if (vendorNames.length > 0 && googleMapsLoaded) fetchCoords();
   }, [vendorNames.join(","), googleMapsLoaded]);
 
+  // ---------- DELIVERY DISTANCE CHECK ----------
   useEffect(() => {
     if (!customerLatLng || vendorCoords.size === 0) return;
     const tooFar: string[] = [];
@@ -335,15 +427,14 @@ const Cart = () => {
         customerLatLng.lat, customerLatLng.lng,
         coords.lat, coords.lng
       );
-      if (distance > MAX_DELIVERY_KM) {
-        tooFar.push(vendorName);
-      }
+      if (distance > MAX_DELIVERY_KM) tooFar.push(vendorName);
     }
     setFarVendors(tooFar);
     setDeliveryUnavailable(tooFar.length > 0);
   }, [customerLatLng, vendorCoords]);
 
-  const calculateDeliveryFee = async () => {
+  // ---------- BATCHED DELIVERY FEE (one DistanceMatrix call) ----------
+  const calculateDeliveryFee = useCallback(async () => {
     if (!customerLatLng || isPickup || !distanceMatrixService) return;
     setCalculatingFee(true);
     setCalculationError(false);
@@ -356,31 +447,34 @@ const Cart = () => {
     }
 
     try {
-      const fees = await Promise.all(origins.map(origin =>
-        new Promise<number>(resolve => {
-          const timeout = setTimeout(() => resolve(FALLBACK_FEE_PER_VENDOR), 8000);
-          distanceMatrixService.getDistanceMatrix(
-            {
-              origins: [origin],
-              destinations: [customerLatLng],
-              travelMode: window.google.maps.TravelMode.DRIVING,
-              unitSystem: window.google.maps.UnitSystem.METRIC,
-            },
-            (response: any, status: string) => {
-              clearTimeout(timeout);
-              if (status === "OK" && response.rows[0].elements[0].status === "OK") {
-                const distanceInMeters = response.rows[0].elements[0].distance.value;
-                const distanceInKm = distanceInMeters / 1000;
-                const fee = getTieredDeliveryFee(distanceInKm);
-                resolve(fee);
-              } else {
-                resolve(FALLBACK_FEE_PER_VENDOR);
-              }
-            }
-          );
-        })
-      ));
-      const totalFee = fees.reduce((s, f) => s + f, 0);
+      // Batch all origins in one DistanceMatrix request (Google supports up to 25 origins)
+      const response = await new Promise<google.maps.DistanceMatrixResponse>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("Timeout")), 8000);
+        distanceMatrixService.getDistanceMatrix(
+          {
+            origins: origins,
+            destinations: [customerLatLng],
+            travelMode: window.google.maps.TravelMode.DRIVING,
+            unitSystem: window.google.maps.UnitSystem.METRIC,
+          },
+          (result: google.maps.DistanceMatrixResponse, status: string) => {
+            clearTimeout(timeout);
+            if (status === "OK") resolve(result);
+            else reject(new Error(status));
+          }
+        );
+      });
+
+      let totalFee = 0;
+      for (let i = 0; i < origins.length; i++) {
+        const element = response.rows[i].elements[0];
+        if (element.status === "OK") {
+          const distanceKm = element.distance.value / 1000;
+          totalFee += getTieredDeliveryFee(distanceKm);
+        } else {
+          totalFee += FALLBACK_FEE_PER_VENDOR;
+        }
+      }
       setDeliveryFee(totalFee);
     } catch {
       setCalculationError(true);
@@ -388,13 +482,13 @@ const Cart = () => {
     } finally {
       setCalculatingFee(false);
     }
-  };
+  }, [customerLatLng, isPickup, distanceMatrixService, vendorCoords, vendorNames]);
 
   useEffect(() => {
     if (customerLatLng && !isPickup && distanceMatrixService) calculateDeliveryFee();
-    else if (customerAddress && !customerLatLng && !isPickup) { setDeliveryFee(500); setCalculatingFee(false); }
-  }, [customerLatLng, customerAddress, isPickup, distanceMatrixService]);
+  }, [customerLatLng, isPickup, distanceMatrixService, calculateDeliveryFee]);
 
+  // ---------- ORDER & PAYMENT (unchanged) ----------
   const saveOrderToSupabase = async (
     details: DeliveryDetails,
     txRef: string,
@@ -588,6 +682,7 @@ const Cart = () => {
   const handleRemoveItem     = (productId: string, sizeId?: string) => removeItem(productId, sizeId);
   const handleUpdateNote     = (productId: string, note: string, sizeId?: string) => updateItemNote(productId, note, sizeId);
 
+  // ---------- RENDER ----------
   return (
     <motion.div className="min-h-screen bg-[#F7FAF7] pb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <header className="sticky top-0 z-30 bg-[#2E7D32] text-white px-4 py-3 flex items-center gap-3 shadow-md">
@@ -677,13 +772,7 @@ const Cart = () => {
                   <input
                     type="text"
                     value={addressInput}
-                    onChange={e => {
-                      setAddressInput(e.target.value);
-                      if (e.target.value === "") {
-                        setAddressSuggestions([]);
-                        setShowSuggestions(false);
-                      }
-                    }}
+                    onChange={e => handleAddressInput(e.target.value)}
                     placeholder="Enter your delivery address in Lagos"
                     className="w-full pl-9 pr-20 py-3 border border-[#E8F5E9] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-[#2E7D32] bg-[#F7FAF7]"
                   />
@@ -706,12 +795,12 @@ const Cart = () => {
                   </div>
                 </div>
 
-                {showSuggestions && addressSuggestions.length > 0 && (
+                {addressUI === "google_suggestions" && addressSuggestions.length > 0 && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-[#E8F5E9] rounded-xl shadow-lg max-h-60 overflow-y-auto">
                     {addressSuggestions.map(s => (
                       <button
                         key={s.place_id}
-                        onClick={() => handleSelectAddress(s)}
+                        onClick={() => handleSelectSuggestion(s)}
                         className="w-full px-4 py-3 text-left hover:bg-[#F7FAF7] flex items-start gap-3 border-b border-[#E8F5E9] last:border-0 transition-colors"
                       >
                         <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -723,11 +812,43 @@ const Cart = () => {
                     ))}
                   </div>
                 )}
+
+                {addressUI === "lagos_fallback" && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-[#E8F5E9] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                    <div className="p-2 text-xs text-gray-500 bg-gray-50 border-b">Popular Lagos areas</div>
+                    {LAGOS_SUGGESTIONS.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => handleLagosSuggestion(s)}
+                        className="w-full px-4 py-2 text-left hover:bg-[#F7FAF7] text-sm text-gray-700 border-b border-[#E8F5E9] last:border-0"
+                      >
+                        📍 {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {isLoadingAddress && (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Loading suggestions…
+              {addressInput && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    onClick={handleManualGeocode}
+                    className="text-xs text-[#2E7D32] font-medium underline underline-offset-2 bg-transparent border-0 cursor-pointer"
+                  >
+                    🔍 Force search this address (if suggestions fail)
+                  </button>
+                  <button
+                    onClick={clearAddress}
+                    className="text-xs text-gray-400 underline underline-offset-2 bg-transparent border-0 cursor-pointer"
+                  >
+                    Clear address
+                  </button>
+                </div>
+              )}
+
+              {addressUI === "loading" && (
+                <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Looking up address...
                 </div>
               )}
               {calculatingFee && (
@@ -768,7 +889,7 @@ const Cart = () => {
                   </div>
                 </div>
               )}
-              {!customerAddress && !isLoadingAddress && (
+              {!customerAddress && addressUI !== "loading" && (
                 <p className="text-xs text-amber-600">⚠️ Enter your delivery address to see delivery fee</p>
               )}
             </div>
@@ -793,13 +914,11 @@ const Cart = () => {
 
           <div className="bg-white rounded-2xl border border-[#E8F5E9] p-4 space-y-3 shadow-sm">
             <p className="text-xs font-bold text-gray-600">Order Summary</p>
-            
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Subtotal</span>
-                <span className="font-medium text-gray-800">{formatPrice(subtotal())}</span>
+                <span className="font-medium text-gray-800">{formatPrice(subtotalAmount)}</span>
               </div>
-              
               <div className="flex justify-between items-start text-sm">
                 <div className="flex items-center gap-1.5">
                   <span className="text-gray-500">Service charge (20%)</span>
@@ -812,7 +931,6 @@ const Cart = () => {
                 </div>
                 <span className="font-medium text-gray-800">{formatPrice(Math.round(serviceCharge))}</span>
               </div>
-              
               {!isPickup && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Delivery fee</span>
@@ -828,14 +946,12 @@ const Cart = () => {
                   )}
                 </div>
               )}
-              
               {tipAmount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Tip</span>
                   <span className="font-medium text-gray-800">{formatPrice(tipAmount)}</span>
                 </div>
               )}
-              
               <div className="border-t border-[#E8F5E9] pt-3 mt-2">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-gray-800">Total</span>

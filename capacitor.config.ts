@@ -5,24 +5,37 @@ const config: CapacitorConfig = {
   appName: 'Miramore',
   webDir: 'dist',
   server: {
-    url: undefined,
+    // No 'url' = serve local files from the APK (best for production)
     androidScheme: 'https',
-    cleartext: true,
+    cleartext: true, // Required for some third‑party assets (maps, Flutterwave)
     allowNavigation: [
       '*.flutterwave.com',
       '*.flw-co-za.com',
       '*.googleapis.com',
       '*.gstatic.com',
+      '*.google.com',           // Additional Google domains
+      '*.googleusercontent.com',
+      '*.ggpht.com',
+      'capacitor://localhost', // For development
+      'http://localhost',
+      'https://localhost',
     ],
   },
   android: {
-    allowMixedContent: true,
-    webContentsDebuggingEnabled: false, // Keep false for release builds
+    allowMixedContent: true,        // Mixed HTTPS/HTTP content
+    webContentsDebuggingEnabled: false, // Keep false for release
     initialFocus: true,
-    windowSoftInputMode: 'adjustResize',
-    // ─── ADD THESE ───
+    windowSoftInputMode: 'adjustResize', // Better keyboard handling
     overrideUserAgent: true,
     appendUserAgent: 'MiramoreApp/1.0',
+  },
+  ios: {
+    // Optional but recommended for iOS
+    allowsLinkPreview: false,
+    allowNavigation: [
+      '*.flutterwave.com',
+      '*.googleapis.com',
+    ],
   },
 };
 
