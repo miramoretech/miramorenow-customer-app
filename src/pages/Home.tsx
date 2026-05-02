@@ -17,7 +17,6 @@ import TodayObsession from "@/components/TodayObsession";
 import ShareSoftLifeModal from "@/components/ShareSoftLifeModal";
 import SideMenu from "@/components/SideMenu";
 import ProductDetailModal from "@/components/ProductDetailModal";
-import CategoryScroll from "@/components/CategoryScroll";
 import { useCartStore } from "@/stores/cartStore";
 import { supabase } from "@/lib/supabase";
 import type { Product } from "@/components/ProductCard";
@@ -246,9 +245,6 @@ function smartSearch(items: any[], query: string, fields: string[]): any[] {
 }
 
 // ── NEW BANNERS — modern foodie design, Miramore green/gold palette ───────────
-// FIX: Replaced clamp() font sizes with fixed px — clamp() is unreliable on
-// Android WebView because it depends on viewport units which Capacitor reports
-// differently. Fixed px sizes always render correctly.
 const BANNERS = [
   {
     id: "play",
@@ -322,7 +318,7 @@ const BANNERS = [
   },
 ];
 
-// ── ALL 12 CATEGORIES ─────────────────────────────────────────────────────────
+// ── ALL 12 CATEGORIES (with emoji, name, image) ───────────────────────────────
 const CATS = [
   { id:"parfait",         name:"Parfait",       emoji:"🍮", img:parfaitCatImg,  fb:[deluxeParfait330], ac:"#F5A623" },
   { id:"shawarma",        name:"Shawarma",      emoji:"🌯", img:shawarmaCatImg, fb:[shawarmaImg],      ac:"#E53935" },
@@ -580,7 +576,6 @@ const Home = () => {
   return (
     <div style={{
       minHeight: "100vh",
-      // EDGE-TO-EDGE FIX: bottom padding accounts for system nav bar
       paddingBottom: "calc(120px + env(safe-area-inset-bottom, 0px))",
       background: C.cream,
       overflowX: "hidden",
@@ -601,7 +596,6 @@ const Home = () => {
         background: "rgba(250,253,246,0.97)",
         backdropFilter: "blur(14px)",
         borderBottom: `1px solid ${C.border}`,
-        // EDGE-TO-EDGE FIX: top padding for status bar
         paddingTop: "env(safe-area-inset-top, 0px)",
       }}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px" }}>
@@ -697,9 +691,6 @@ const Home = () => {
       </HScroll>
 
       {/* ── NEW BANNER DESIGN ──────────────────────────────────────────────── */}
-      {/* FIX: No clamp() — fixed font sizes for Android reliability           */}
-      {/* FIX: CTA button is smaller and text-readable                          */}
-      {/* FIX: Text has explicit color + textShadow so it's never invisible     */}
       <div style={{ padding:"0 14px" }}>
         <div
           style={{
@@ -736,14 +727,12 @@ const Home = () => {
                 </defs>
                 <rect width="100%" height="100%" fill={`url(#pp-${banner.id})`}/>
               </svg>
-
               {/* Glow orb top right */}
               <div style={{
                 position:"absolute", right:0, top:0, width:90, height:90,
                 background:`radial-gradient(circle, ${banner.accent}50 0%, transparent 70%)`,
                 filter:"blur(18px)", pointerEvents:"none",
               }}/>
-
               {/* Right side decorative emoji */}
               <div style={{
                 position:"absolute", right:16, top:"50%",
@@ -754,62 +743,28 @@ const Home = () => {
               }}>
                 {banner.topDeco}
               </div>
-
               {/* Content */}
               <div style={{ position:"relative", zIndex:2, maxWidth:"72%" }}>
-                {/* Badge */}
                 <div style={{
                   display:"inline-flex", alignItems:"center",
                   borderRadius:99, padding:"3px 10px", marginBottom:8,
                   background:`${banner.accent}20`,
                   border:`1px solid ${banner.accent}50`,
                 }}>
-                  <span style={{
-                    fontSize:10, fontWeight:800,
-                    color:banner.accent,
-                    letterSpacing:"0.02em",
-                  }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:banner.accent, letterSpacing:"0.02em" }}>
                     {banner.badge}
                   </span>
                 </div>
-
-                {/* Title — FIXED 18px, not clamp() */}
-                <p style={{
-                  color: "#FFFFFF",
-                  fontWeight: 900,
-                  fontSize: 18,
-                  lineHeight: 1.15,
-                  margin: 0,
-                  textShadow: "0 1px 6px rgba(0,0,0,0.4)",
-                }}>
+                <p style={{ color:"#FFFFFF", fontWeight:900, fontSize:18, lineHeight:1.15, margin:0, textShadow:"0 1px 6px rgba(0,0,0,0.4)" }}>
                   {banner.title}
                 </p>
-
-                {/* Sub — FIXED 13px, gold, clearly visible */}
-                <p style={{
-                  color: banner.accent,
-                  fontWeight: 700,
-                  fontSize: 13,
-                  lineHeight: 1.3,
-                  margin: "3px 0 6px",
-                  textShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                }}>
+                <p style={{ color: banner.accent, fontWeight:700, fontSize:13, lineHeight:1.3, margin:"3px 0 6px", textShadow:"0 1px 4px rgba(0,0,0,0.3)" }}>
                   {banner.sub}
                 </p>
-
-                {/* Desc — FIXED 11px, clearly legible */}
-                <p style={{
-                  color: "rgba(255,255,255,0.82)",
-                  fontSize: 11,
-                  lineHeight: 1.55,
-                  margin: 0,
-                  textShadow: "0 1px 3px rgba(0,0,0,0.3)",
-                }}>
+                <p style={{ color:"rgba(255,255,255,0.82)", fontSize:11, lineHeight:1.55, margin:0, textShadow:"0 1px 3px rgba(0,0,0,0.3)" }}>
                   {banner.desc}
                 </p>
               </div>
-
-              {/* CTA — SMALLER, cleaner */}
               <motion.button
                 whileTap={{ scale:0.92 }}
                 onClick={()=>{ if(banner.action) setSendFoodOpen(true); else if(banner.route) navigate(banner.route); }}
@@ -834,8 +789,6 @@ const Home = () => {
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Dots */}
         <div style={{ display:"flex",justifyContent:"center",gap:5,marginTop:8 }}>
           {BANNERS.map((_,i)=>(
             <button key={i} onClick={()=>setBannerIdx(i)} style={{
@@ -852,7 +805,7 @@ const Home = () => {
       {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
       <div style={{ padding:"14px 14px 0" }}>
 
-        {/* Greeting — "50% OFF Today" REMOVED */}
+        {/* Greeting */}
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
           <div>
             <p style={{ fontSize:11,fontWeight:500,color:"#999",margin:0 }}>{getGreeting()} 👋</p>
@@ -862,28 +815,70 @@ const Home = () => {
           </div>
         </div>
 
-        {/* ── CATEGORIES ─────────────────────────────────────────────────────
-            FIX: Now uses CategoryScroll component which has:
-            - Pure CSS native scroll (no JS touch override)
-            - Inline styles only (reliable in Android WebView)
-            - No negative margins
-            - minWidth:max-content inner row
-        ────────────────────────────────────────────────────────────────────── */}
-        <div style={{ marginBottom:16 }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
-            <h2 style={{ fontSize:14,fontWeight:900,color:C.text,margin:0 }}>Categories</h2>
-            <span style={{ fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:C.green100,color:C.green }}>
-              All {CATS.length}
-            </span>
-          </div>
-          <CategoryScroll
-            categories={CATS}
-            activeCat={activeCat}
-            onCatClick={(catId, catName) => {
-              setActiveCat(catId);
-              handleCatClick(catId, catName);
-            }}
-          />
+        {/* ── CATEGORIES (FIXED: horizontal scroll, all 12, no badge) ───────── */}
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 900, color: C.text, marginBottom: 12 }}>Categories</h2>
+          <HScroll style={{ marginLeft: -14, marginRight: -14, paddingLeft: 14, paddingRight: 14 }}>
+            {CATS.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveCat(cat.id);
+                  handleCatClick(cat.id, cat.name);
+                }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  width: 80,
+                  marginRight: 12,
+                  padding: "8px 4px",
+                  borderRadius: 16,
+                  background: activeCat === cat.id ? C.green100 : C.white,
+                  border: `1.5px solid ${activeCat === cat.id ? C.green : C.border}`,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    overflow: "hidden",
+                    background: C.green50,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <img
+                    src={cat.img}
+                    alt={cat.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                    loading="lazy"
+                  />
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: activeCat === cat.id ? 800 : 600,
+                    color: activeCat === cat.id ? C.green : "#444",
+                    marginTop: 6,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {cat.emoji} {cat.name}
+                </span>
+              </button>
+            ))}
+          </HScroll>
         </div>
 
         {/* Subcategory pills */}
@@ -1103,7 +1098,7 @@ const Home = () => {
 
       <BottomNav />
 
-      {/* Floating Cart button — EDGE-TO-EDGE FIX: bottom accounts for system nav */}
+      {/* Floating Cart button */}
       <AnimatePresence>
         {cartCount>0 && (
           <motion.button initial={{scale:0,y:20}} animate={{scale:1,y:0}} exit={{scale:0,y:20}} whileTap={{scale:0.95}}
@@ -1124,7 +1119,7 @@ const Home = () => {
         )}
       </AnimatePresence>
 
-      {/* Healthy FAB — EDGE-TO-EDGE FIX */}
+      {/* Healthy FAB */}
       <button
         onClick={() => setShowHealthy(true)}
         style={{
