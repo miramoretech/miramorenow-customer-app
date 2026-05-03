@@ -1,9 +1,10 @@
 // src/pages/Cart.tsx
 // ✅ SIMPLIFIED ADDRESS ENTRY – auto geocode, no suggestions, no extra buttons, no crash
+// ✅ FIXED: cart totals now update when quantity changes
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   ArrowLeft, ShoppingCart, CreditCard, Wallet, Truck, Store,
-  MessageSquare, Loader2, MapPin, X, Info, AlertTriangle
+  MessageSquare, Loader2, MapPin, X, AlertTriangle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -13,7 +14,6 @@ import CheckoutModal, { type DeliveryDetails } from "@/components/CheckoutModal"
 import VendorGroup from "@/components/cart/VendorGroup";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Capacitor } from "@capacitor/core";
 import { isFreeDeliveryActive } from "@/utils/promoConfig";
 
 const formatPrice = (price: number): string => {
@@ -52,10 +52,17 @@ const Cart = () => {
   const navigate = useNavigate();
   const {
     items, removeItem, updateQuantity, updateItemNote,
-    clearCart, subtotal, deliveryMode, setDeliveryMode,
+    clearCart, deliveryMode, setDeliveryMode,
     globalNote, setGlobalNote,
   } = useCartStore();
 
+  // ========== FIX: Compute subtotal reactively from items ==========
+  const subtotalAmount = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  }, [items]); // ✅ Now updates when quantity changes
+
+  const serviceCharge = useMemo(() => subtotalAmount * SERVICE_CHARGE_RATE, [subtotalAmount]);
+  
   const [showCheckout, setShowCheckout] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"full" | "installment">("full");
@@ -98,8 +105,6 @@ const Cart = () => {
   const vendorNames = Object.keys(vendorGroups);
   const finalDeliveryFee = deliveryFee;
 
-  const subtotalAmount = useMemo(() => subtotal(), [subtotal]);
-  const serviceCharge = useMemo(() => subtotalAmount * SERVICE_CHARGE_RATE, [subtotalAmount]);
   const total = useMemo(() => subtotalAmount + serviceCharge + tipAmount, [subtotalAmount, serviceCharge, tipAmount]);
 
   const hasBeautyItems = useMemo(() => items.some(i => i.product.category === "beauty"), [items]);
@@ -162,7 +167,6 @@ const Cart = () => {
   // ---------- AUTO-GEOCODE ON TYPING (debounced, no spam, no input overwrite) ----------
   const resolveAddress = useCallback((rawAddress: string) => {
     if (!geocoder.current || !rawAddress.trim()) return;
-    // Avoid re‑geocoding the same address
     if (rawAddress === lastResolvedAddress.current) return;
 
     setIsResolving(true);
@@ -173,18 +177,14 @@ const Cart = () => {
         if (!isMounted.current) return;
         setIsResolving(false);
         if (status === "OK" && results && results[0]) {
-          // Optional: reject very approximate results (like "Lagos, Nigeria")
           const loc = results[0].geometry.location;
           const formatted = results[0].formatted_address;
-          // Only update if the result is reasonably accurate
           if (formatted.toLowerCase().includes("lagos") || results[0].geometry.location_type !== "APPROXIMATE") {
             setCustomerAddress(formatted);
             setCustomerLatLng({ lat: loc.lat(), lng: loc.lng() });
             lastResolvedAddress.current = rawAddress;
-            // Do NOT overwrite user input while they're typing – we only show a confirmation below
             toast.success("Address found", { duration: 1500 });
           } else {
-            // Silently ignore poor match
             console.warn("Geocode result too general");
           }
         } else {
@@ -200,7 +200,7 @@ const Cart = () => {
     if (value.trim().length > 5) {
       debounceTimer.current = setTimeout(() => {
         resolveAddress(value);
-      }, 500); // 500ms feels instant
+      }, 500);
     }
   }, [resolveAddress]);
 
@@ -251,7 +251,6 @@ const Cart = () => {
   // ---------- DELIVERY DISTANCE CHECK ----------
   useEffect(() => {
     if (!customerLatLng || vendorCoords.size === 0) return;
-    // Ensure we have coords for all vendors, otherwise block checkout
     if (vendorCoords.size !== vendorNames.length) {
       setDeliveryUnavailable(true);
       setFarVendors(["Unknown vendor location"]);
@@ -323,7 +322,7 @@ const Cart = () => {
     if (customerLatLng && !isPickup && distanceMatrixService) calculateDeliveryFee();
   }, [customerLatLng, isPickup, distanceMatrixService, calculateDeliveryFee]);
 
-  // ---------- ORDER & PAYMENT (INTACT FROM YOUR WORKING VERSION) ----------
+  // ---------- ORDER & PAYMENT ----------
   const saveOrderToSupabase = async (
     details: DeliveryDetails,
     txRef: string,
@@ -664,7 +663,6 @@ const Cart = () => {
             </div>
           )}
 
-          {/* Tip, Order Summary, Installment sections – identical to previous working version */}
           <div className="bg-white rounded-2xl border border-[#E8F5E9] p-4 space-y-3 shadow-sm">
             <p className="text-xs font-bold text-gray-600">💝 Tip your rider (optional)</p>
             <div className="flex gap-2 flex-wrap">
