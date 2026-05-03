@@ -131,7 +131,7 @@ export default function OnboardingSignup() {
         password,
         options: {
           data: {
-            phone: fullPhone,
+            phone: fullPhone,          // saved in user_metadata
             full_name: email.split("@")[0],
             onboarding_completed: false,
           },
@@ -142,6 +142,13 @@ export default function OnboardingSignup() {
 
       if (data.user) {
         const userId = data.user.id;
+
+        // ✅ Save phone number directly to the profiles table (so you can see it easily)
+        await supabase
+          .from("profiles")
+          .update({ phone: fullPhone })
+          .eq("id", userId);
+
         sessionStorage.setItem("user_id", userId);
         sessionStorage.setItem("user_email", email);
         sessionStorage.setItem("user_phone", fullPhone);
