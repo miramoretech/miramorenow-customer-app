@@ -143,11 +143,25 @@ export default function OnboardingSignup() {
       if (data.user) {
         const userId = data.user.id;
 
-        // ✅ Save phone number directly to the profiles table (so you can see it easily)
-        await supabase
+        // ✅ CREATE OR UPDATE the profile row with phone number (using upsert)
+        const { error: upsertError } = await supabase
           .from("profiles")
-          .update({ phone: fullPhone })
-          .eq("id", userId);
+          .upsert({
+            id: userId,
+            phone: fullPhone,
+            email: email,
+            full_name: email.split("@")[0],
+            onboarding_completed: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+
+        if (upsertError) {
+          console.error("Failed to save phone number to profiles:", upsertError);
+          toast.warning("Account created but phone number not saved. You can add it later.");
+        } else {
+          console.log("✅ Phone number saved to profiles table");
+        }
 
         sessionStorage.setItem("user_id", userId);
         sessionStorage.setItem("user_email", email);
@@ -161,7 +175,7 @@ export default function OnboardingSignup() {
         // Step 2: request & save notification preference
         await requestAndSaveNotifications(userId);
 
-        // Step 3: mark onboarding as complete
+        // Step 3: mark onboarding as complete (update the existing row)
         await supabase
           .from("profiles")
           .update({ onboarding_completed: true })
