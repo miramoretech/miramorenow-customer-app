@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-// ✅ SAFE RELATIVE IMPORT (works on Vite + Vercel)
-import logo from "../assets/icon.png";
+// ✅ CORRECT PATH from src/pages/ to root assets/
+import logo from "../../assets/icon.png";
 
 export default function Splash() {
   const navigate = useNavigate();
@@ -11,14 +11,12 @@ export default function Splash() {
   useEffect(() => {
     const timer = setTimeout(() => {
       const onboardingComplete = localStorage.getItem("onboarding_complete");
-
       if (onboardingComplete === "true") {
         navigate("/home");
       } else {
         navigate("/welcome");
       }
-    }, 4000); // slightly faster, feels more premium
-
+    }, 4000);
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -30,7 +28,6 @@ export default function Splash() {
         transition={{ duration: 0.7, ease: "easeOut" }}
         className="text-center"
       >
-        {/* ✅ LOGO (FIXED) */}
         <motion.img
           src={logo}
           alt="Miramore Logo"
@@ -39,7 +36,6 @@ export default function Splash() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
         />
-
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -48,7 +44,6 @@ export default function Splash() {
         >
           Miramore
         </motion.h1>
-
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -57,8 +52,6 @@ export default function Splash() {
         >
           Fresh. Local. Delivered.
         </motion.p>
-
-        {/* Loading dots */}
         <div className="flex justify-center gap-1.5 mt-8">
           {[0, 1, 2].map((i) => (
             <motion.div
