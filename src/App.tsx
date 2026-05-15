@@ -38,8 +38,12 @@ import CollectionDetail from "./pages/CollectionDetail";
 import PlayAndWin from "./pages/PlayAndWin";
 import HealthyChallenge from "./pages/HealthyChallenge";
 import ShopPage from "./pages/ShopPage";
+import SendPage from "./pages/SendPage";
 import PharmaciesPage from "./pages/PharmaciesPage";
 import LocalMarketsPage from "./pages/LocalMarketsPage";
+
+// NEW: Delivery tracking page
+import DeliveryTracking from "./pages/DeliveryTracking";
 
 // Admin imports
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -153,6 +157,7 @@ function AppContent() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/order-tracking" element={<OrderTracking />} />
+        <Route path="/delivery-tracking/:trackingNumber" element={<DeliveryTracking />} />
         <Route path="/rewards" element={<Rewards />} />
         <Route path="/invite" element={<InviteFriend />} />
         <Route path="/settings" element={<Settings />} />
@@ -171,8 +176,9 @@ function AppContent() {
         <Route path="/play" element={<PlayAndWin />} />
         <Route path="/healthy-challenge" element={<HealthyChallenge />} />
 
-        {/* Shops, pharmacies, markets */}
+        {/* Shops, Send, Pharmacies, Markets */}
         <Route path="/shops" element={<ShopPage />} />
+        <Route path="/send" element={<SendPage />} />
         <Route path="/pharmacies" element={<PharmaciesPage />} />
         <Route path="/local-markets" element={<LocalMarketsPage />} />
 
@@ -203,7 +209,6 @@ function AppContent() {
   );
 }
 
-// ✅ DEFAULT EXPORT – ensures main.tsx can import App
 function App() {
   return (
     <QueryClientProvider client={queryClient}>

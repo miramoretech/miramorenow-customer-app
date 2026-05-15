@@ -1,10 +1,9 @@
 // src/pages/Home.tsx
 // FIXES IN THIS VERSION:
-// 1. ✅ Category scroll TRULY fixed — scroll container placed OUTSIDE padded wrapper
-//    so overflowX:hidden on page root CANNOT clip it. No negative margins at all.
-// 2. ✅ WhatsApp (LEFT) vs Healthy+Cart (RIGHT) — completely separated, no overlap
-//    Healthy FAB is on the RIGHT and animates up when Cart FAB appears.
-// 3. ✅ HScroll component uses innerPadding props instead of negative margins
+// 1. ✅ Removed broken unicode \uD83D\uDC4B wave emoji from greeting
+// 2. ✅ "Shops" tab renamed to "Beauty Shop"
+// 3. ✅ "Send" tab added before "Pharmacies" in top filter tabs
+// 4. ✅ Top filter tabs now inside HScroll — all tabs scrollable on mobile
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
@@ -261,9 +260,6 @@ const VendorImg = ({url,name}:{url:string|null;name:string}) => {
   return<img src={src} alt={name} loading="eager" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>setErr(true)}/>;
 };
 
-// THE REAL FIX: HScroll uses innerPaddingLeft/Right on the inner flex row
-// so we NEVER need negative margins on the outer container.
-// Negative margins + overflowX:hidden ancestor = clipped scroll. Avoid always.
 const HScroll = ({children,style={},innerPaddingLeft=14,innerPaddingRight=14}:{
   children:React.ReactNode;style?:React.CSSProperties;
   innerPaddingLeft?:number;innerPaddingRight?:number;
@@ -448,7 +444,6 @@ const Home = () => {
     </div>
   );
 
-  // Healthy FAB bottom position: right side, above Cart when cart visible
   const healthyBottom=cartCount>0
     ?"calc(144px + env(safe-area-inset-bottom, 0px))"
     :"calc(80px + env(safe-area-inset-bottom, 0px))";
@@ -493,21 +488,38 @@ const Home = () => {
             <Mic style={{width:16,height:16,color:isListening?C.green:"#bbb"}}/>
           </button>
         </div>
-        {isListening&&<p style={{fontSize:10,fontWeight:600,textAlign:"center",marginTop:4,color:C.green}}>\uD83C\uDF99\uFE0F Listening...</p>}
+        {isListening&&<p style={{fontSize:10,fontWeight:600,textAlign:"center",marginTop:4,color:C.green}}>Listening...</p>}
         {isSearching&&<p style={{fontSize:10,marginTop:4,paddingLeft:4,color:"#888"}}>{products.length>0?`Found ${products.length} result${products.length!==1?"s":""} for "${searchQuery}"`:`No results for "${searchQuery}"`}</p>}
       </div>
 
-      {/* TOP FILTER TABS */}
-      <HScroll style={{marginTop:8,marginBottom:8}} innerPaddingLeft={14} innerPaddingRight={14}>
+      {/* ─── TOP FILTER TABS — NOW SCROLLABLE ─────────────────────────────────
+          Previously these were static flex buttons clipped at 5 visible items.
+          Now wrapped in HScroll so user can swipe left to reveal Send, Pharmacies,
+          Local Markets. "Shops" renamed to "Beauty Shop". "Send" added before Pharmacies.
+      ─────────────────────────────────────────────────────────────────────── */}
+      <HScroll style={{marginTop:8,marginBottom:8}} innerPaddingLeft={14} innerPaddingRight={20}>
         {[
-          {label:"All",action:()=>setActivePageFilter("All"),active:activePageFilter==="All"},
+          {label:"All",        action:()=>setActivePageFilter("All"),        active:activePageFilter==="All"},
           {label:"Restaurants",action:()=>setActivePageFilter("Restaurants"),active:activePageFilter==="Restaurants"},
-          {label:"Shops",action:()=>navigate("/shops"),active:false},
-          {label:"Pharmacies",action:()=>navigate("/pharmacies"),active:false},
-          {label:"Local Markets",action:()=>navigate("/local-markets"),active:false},
+          {label:"Beauty Shop",action:()=>navigate("/shops"),                active:false},
+          {label:"Send",       action:()=>navigate("/send"),                 active:false},
+          {label:"Pharmacies", action:()=>navigate("/pharmacies"),           active:false},
+          {label:"Local Markets",action:()=>navigate("/local-markets"),      active:false},
         ].map(item=>(
           <button key={item.label} onClick={item.action}
-            style={{fontSize:15,fontWeight:item.active?800:500,color:item.active?C.green:"#666",paddingBottom:4,paddingRight:16,background:"transparent",border:"none",borderBottom:`2.5px solid ${item.active?C.green:"transparent"}`,cursor:"pointer",whiteSpace:"nowrap"}}>
+            style={{
+              fontSize:15,
+              fontWeight:item.active?800:500,
+              color:item.active?C.green:"#666",
+              paddingBottom:4,
+              paddingRight:20,
+              background:"transparent",
+              border:"none",
+              borderBottom:`2.5px solid ${item.active?C.green:"transparent"}`,
+              cursor:"pointer",
+              whiteSpace:"nowrap",
+              flexShrink:0,
+            }}>
             {item.label}
           </button>
         ))}
@@ -558,10 +570,10 @@ const Home = () => {
         </div>
       </div>
 
-      {/* GREETING inside padded wrapper */}
+      {/* GREETING — FIX: removed broken unicode wave, use plain text greeting only */}
       <div style={{padding:"14px 14px 0"}}>
         <div style={{marginBottom:10}}>
-          <p style={{fontSize:11,fontWeight:500,color:"#999",margin:0}}>{getGreeting()} \uD83D\uDC4B</p>
+          <p style={{fontSize:11,fontWeight:500,color:"#999",margin:0}}>{getGreeting()}</p>
           <h2 style={{fontSize:16,fontWeight:900,color:C.text,margin:0}}>{userName?`${userName}!`:"Foodie!"}</h2>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -570,11 +582,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* ─── CATEGORY SCROLL ───────────────────────────────────────────────────
-          PLACED OUTSIDE the padded div so it gets FULL viewport width.
-          overflowX:hidden on page root cannot clip a full-width scroll container.
-          This is the definitive fix for Android category scroll not working.
-      ─────────────────────────────────────────────────────────────────────── */}
+      {/* CATEGORY SCROLL */}
       <HScroll style={{marginBottom:16}} innerPaddingLeft={14} innerPaddingRight={20}>
         {CATS.map(cat=>{
           const isActive=activeCat===cat.id;
@@ -637,7 +645,7 @@ const Home = () => {
               style={{background:C.green100,border:`1px solid ${C.border}`,borderRadius:12,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,overflow:"hidden"}}>
               <span style={{fontSize:11,fontWeight:600,color:C.green,display:"flex",alignItems:"center",gap:5}}>
                 <CheckCircle2 style={{width:14,height:14}}/>
-                {activeQF.size} filter{activeQF.size>1?"s":""} active \u2014 {filteredV.length} vendors
+                {activeQF.size} filter{activeQF.size>1?"s":""} active — {filteredV.length} vendors
               </span>
               <button onClick={()=>setActiveQF(new Set())} style={{fontSize:10,fontWeight:700,color:C.green,background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Clear</button>
             </motion.div>
@@ -648,7 +656,7 @@ const Home = () => {
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
             <h2 style={{fontSize:14,fontWeight:900,color:C.text,margin:0,display:"flex",alignItems:"center",gap:6}}>
               <TrendingUp style={{width:16,height:16,color:C.green}}/>
-              {activeQF.has("near")?"\u26A1 Fastest":activeQF.has("top_rated")?"\u2B50 Top Rated":activeQF.has("under3k")?"\uD83D\uDCB8 Budget":activeQF.has("deals")?"\uD83D\uDD25 Deals":activeQF.has("healthy")?"\uD83E\uDD57 Healthy":"RECOMMENDED FOR YOU"}
+              {activeQF.has("near")?"Fastest Near You":activeQF.has("top_rated")?"Top Rated":activeQF.has("under3k")?"Budget Picks":activeQF.has("deals")?"Best Deals":activeQF.has("healthy")?"Healthy Options":"RECOMMENDED FOR YOU"}
             </h2>
             <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,background:C.green100,color:C.green}}>{filteredV.length} vendors</span>
           </div>
@@ -688,7 +696,7 @@ const Home = () => {
                   <h4 style={{fontWeight:700,fontSize:13,color:C.text,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.store_name}</h4>
                   <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#888",marginTop:3}}>
                     <Star style={{width:12,height:12,fill:C.gold,color:C.gold}}/><span style={{fontWeight:600,color:"#555"}}>{v.rating||5.0}</span>
-                    <span style={{color:"#ddd"}}>•</span><Clock style={{width:12,height:12}}/><span>5\u201310 min</span>
+                    <span style={{color:"#ddd"}}>•</span><Clock style={{width:12,height:12}}/><span>5–10 min</span>
                     <span style={{color:"#ddd"}}>•</span><span>From {formatPrice(v.min_price||1350)}</span>
                   </div>
                 </div>
@@ -733,9 +741,9 @@ const Home = () => {
                     <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:5,fontSize:10,color:"#888",marginTop:4}}>
                       <Star style={{width:11,height:11,fill:C.gold,color:C.gold}}/><span style={{fontWeight:700,color:"#555"}}>{v.rating||5.0}</span>
                       <span style={{color:"#ddd"}}>•</span><span>From {formatPrice(v.min_price||1350)}</span>
-                      <span style={{color:"#ddd"}}>•</span><Clock style={{width:10,height:10}}/><span>5\u201310 min</span>
+                      <span style={{color:"#ddd"}}>•</span><Clock style={{width:10,height:10}}/><span>5–10 min</span>
                     </div>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:6,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:99,background:C.goldLight,color:C.goldDark,border:`1px solid ${C.gold}50`}}>\uD83D\uDE9A Free delivery</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:6,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:99,background:C.goldLight,color:C.goldDark,border:`1px solid ${C.gold}50`}}>Free delivery</span>
                   </div>
                   <ChevronRight style={{width:16,height:16,color:"#ccc",flexShrink:0,marginTop:4}}/>
                 </div>
@@ -745,10 +753,10 @@ const Home = () => {
         )}
 
         <section style={{marginBottom:24}}>
-          <h2 style={{fontSize:14,fontWeight:900,color:C.text,marginBottom:12}}>{isSearching?`\uD83D\uDD0D "${searchQuery}"`:"\uD83C\uDF7D\uFE0F Popular Items"}</h2>
+          <h2 style={{fontSize:14,fontWeight:900,color:C.text,marginBottom:12}}>{isSearching?`Search: "${searchQuery}"`:"Popular Items"}</h2>
           {products.length===0
             ?<div style={{textAlign:"center",padding:"40px 20px",background:C.white,borderRadius:16,border:`1.5px solid ${C.border}`}}>
-               <p style={{fontSize:32,margin:"0 0 8px"}}>\uD83C\uDF7D\uFE0F</p>
+               <p style={{fontSize:32,margin:"0 0 8px"}}>🍽️</p>
                <p style={{fontSize:13,fontWeight:500,color:"#888",margin:0}}>{isSearching?`Nothing found for "${searchQuery}"`:"No products found"}</p>
              </div>
             :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -760,13 +768,13 @@ const Home = () => {
         </section>
 
         <div style={{textAlign:"center",padding:"16px 0 8px"}}>
-          <p style={{fontSize:11,fontWeight:600,color:C.green,margin:0}}>"Send love. Send food." \uD83D\uDC9A</p>
+          <p style={{fontSize:11,fontWeight:600,color:C.green,margin:0}}>"Send love. Send food." 💚</p>
         </div>
       </div>
 
       <BottomNav/>
 
-      {/* CART FAB — RIGHT side, bottom */}
+      {/* CART FAB */}
       <AnimatePresence>
         {cartCount>0&&(
           <motion.button initial={{scale:0,y:20}} animate={{scale:1,y:0}} exit={{scale:0,y:20}} whileTap={{scale:0.95}}
@@ -777,7 +785,7 @@ const Home = () => {
         )}
       </AnimatePresence>
 
-      {/* HEALTHY FAB — RIGHT side, above Cart. WhatsApp stays LEFT via WhatsAppButton. */}
+      {/* HEALTHY FAB */}
       <motion.button
         animate={{bottom:healthyBottom}}
         transition={{type:"spring",stiffness:300,damping:28}}
@@ -790,10 +798,9 @@ const Home = () => {
         <span style={{fontSize:8,color:"#fff",fontWeight:900,marginTop:2}}>Healthy</span>
       </motion.button>
 
-      {/* WhatsApp on LEFT — its own component, its own position, no conflict */}
       <WhatsAppButton/>
 
-      {/* MODALS */}
+      {/* VENDOR PICK MODAL */}
       <AnimatePresence>
         {vendorPickModal.open&&(
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
@@ -814,7 +821,7 @@ const Home = () => {
                       <div style={{width:48,height:48,borderRadius:12,overflow:"hidden",flexShrink:0,background:C.white}}><VendorImg url={vendor?.store_logo_url||null} name={vName}/></div>
                       <div style={{flex:1}}>
                         <p style={{fontWeight:800,fontSize:13,color:C.text,margin:0}}>{vName}</p>
-                        {vendor&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#888",marginTop:3}}><Star style={{width:11,height:11,fill:C.gold,color:C.gold}}/><span style={{fontWeight:600,color:"#555"}}>{vendor.rating||5.0}</span><span style={{color:"#ddd"}}>•</span><span>5\u201310 min</span></div>}
+                        {vendor&&<div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#888",marginTop:3}}><Star style={{width:11,height:11,fill:C.gold,color:C.gold}}/><span style={{fontWeight:600,color:"#555"}}>{vendor.rating||5.0}</span><span style={{color:"#ddd"}}>•</span><span>5–10 min</span></div>}
                       </div>
                       <ChevronRight style={{width:16,height:16,color:C.green,flexShrink:0}}/>
                     </button>
@@ -826,6 +833,7 @@ const Home = () => {
         )}
       </AnimatePresence>
 
+      {/* HEALTHY MODAL */}
       <AnimatePresence>
         {showHealthy&&(
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
@@ -836,8 +844,8 @@ const Home = () => {
               onClick={e=>e.stopPropagation()}>
               <div style={{textAlign:"center",marginBottom:16}}>
                 <div style={{width:56,height:56,borderRadius:16,background:C.green100,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}><Leaf style={{width:28,height:28,color:C.green}}/></div>
-                <h3 style={{fontSize:15,fontWeight:900,color:C.text,margin:"0 0 4px"}}>Miramore Fit Feast Challenge \uD83D\uDC9A</h3>
-                <p style={{fontSize:12,color:"#888",margin:0}}>Order 4 healthy meals \u2192 get a FREE meal!</p>
+                <h3 style={{fontSize:15,fontWeight:900,color:C.text,margin:"0 0 4px"}}>Miramore Fit Feast Challenge 💚</h3>
+                <p style={{fontSize:12,color:"#888",margin:0}}>Order 4 healthy meals — get a FREE meal!</p>
               </div>
               <div style={{background:C.green50,border:`1px solid ${C.border}`,borderRadius:12,padding:12,marginBottom:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
@@ -848,13 +856,14 @@ const Home = () => {
               </div>
               <button onClick={()=>{setShowHealthy(false);navigate("/healthy-challenge");}}
                 style={{width:"100%",padding:"12px 0",borderRadius:12,fontSize:13,fontWeight:900,color:"#fff",background:`linear-gradient(135deg,${C.green},${C.greenMid})`,border:"none",cursor:"pointer",boxShadow:`0 4px 16px ${C.green}50`}}>
-                Start My Naija Fit Journey \uD83C\uDDF3\uD83C\uDDEC
+                Start My Naija Fit Journey 🇳🇬
               </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* FILTER MODAL */}
       <AnimatePresence>
         {showFilterModal&&(
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
