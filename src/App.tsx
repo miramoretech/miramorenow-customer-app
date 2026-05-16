@@ -45,9 +45,8 @@ import DeliveryTracking from "./pages/DeliveryTracking";
 import PharmaciesPage from "./pages/PharmaciesPage";
 import LocalMarketsPage from "./pages/LocalMarketsPage";
 
-// Admin pages (ensure these files exist)
+// Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
-import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
@@ -58,8 +57,8 @@ import AdminVendors from "./pages/admin/AdminVendors";
 import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
-import AdminDeliveries from "./pages/admin/AdminDeliveries";     // <-- NEW
-import AdminFoodOrders from "./pages/admin/AdminFoodOrders";   // <-- NEW (create if needed)
+import AdminDeliveries from "./pages/admin/AdminDeliveries";
+import AdminFoodOrders from "./pages/admin/AdminFoodOrders";
 
 // Rider pages
 import RiderLogin from "./pages/rider/RiderLogin";
@@ -160,25 +159,22 @@ function AppContent() {
         <Route path="/pharmacies" element={<PharmaciesPage />} />
         <Route path="/local-markets" element={<LocalMarketsPage />} />
 
-        {/* Admin - Protected with AdminRoute */}
+        {/* Admin Login (public) */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          {/* Protected routes - only accessible to admin users */}
-          <Route path="dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-          <Route path="orders/:id" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
-          <Route path="customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
-          <Route path="riders" element={<AdminRoute><AdminRiders /></AdminRoute>} />
-          <Route path="riders/:id" element={<AdminRoute><AdminRiderDetail /></AdminRoute>} />
-          <Route path="vendors" element={<AdminRoute><AdminVendors /></AdminRoute>} />
-          <Route path="payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
-          <Route path="analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
-          <Route path="settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-          
-          {/* New admin pages for package deliveries and food orders */}
-          <Route path="deliveries" element={<AdminRoute><AdminDeliveries /></AdminRoute>} />
-          <Route path="food-orders" element={<AdminRoute><AdminFoodOrders /></AdminRoute>} />
-        </Route>
+
+        {/* Admin pages – all flat, no nested layout, protected by AdminRoute */}
+        <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+        <Route path="/admin/orders/:id" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
+        <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
+        <Route path="/admin/riders" element={<AdminRoute><AdminRiders /></AdminRoute>} />
+        <Route path="/admin/riders/:id" element={<AdminRoute><AdminRiderDetail /></AdminRoute>} />
+        <Route path="/admin/vendors" element={<AdminRoute><AdminVendors /></AdminRoute>} />
+        <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
+        <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+        <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+        <Route path="/admin/deliveries" element={<AdminRoute><AdminDeliveries /></AdminRoute>} />
+        <Route path="/admin/food-orders" element={<AdminRoute><AdminFoodOrders /></AdminRoute>} />
 
         {/* Rider */}
         <Route path="/rider/login" element={<RiderLogin />} />
