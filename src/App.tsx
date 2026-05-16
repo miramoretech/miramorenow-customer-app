@@ -8,6 +8,10 @@ import { useCapacitorPushNotifications } from "@/hooks/useCapacitorPushNotificat
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
+// Import AdminRoute guard
+import { AdminRoute } from "@/components/AdminRoute";
+
+// Page imports
 import Splash from "./pages/Splash";
 import Welcome from "./pages/Welcome";
 import OnboardingSignup from "./pages/OnboardingSignup";
@@ -40,6 +44,8 @@ import SendPage from "./pages/SendPage";
 import DeliveryTracking from "./pages/DeliveryTracking";
 import PharmaciesPage from "./pages/PharmaciesPage";
 import LocalMarketsPage from "./pages/LocalMarketsPage";
+
+// Admin pages (ensure these files exist)
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -52,6 +58,10 @@ import AdminVendors from "./pages/admin/AdminVendors";
 import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminDeliveries from "./pages/admin/AdminDeliveries";     // <-- NEW
+import AdminFoodOrders from "./pages/admin/AdminFoodOrders";   // <-- NEW (create if needed)
+
+// Rider pages
 import RiderLogin from "./pages/rider/RiderLogin";
 import RiderDashboard from "./pages/rider/RiderDashboard";
 import RiderHistory from "./pages/rider/RiderHistory";
@@ -150,19 +160,24 @@ function AppContent() {
         <Route path="/pharmacies" element={<PharmaciesPage />} />
         <Route path="/local-markets" element={<LocalMarketsPage />} />
 
-        {/* Admin */}
+        {/* Admin - Protected with AdminRoute */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="orders/:id" element={<AdminOrderDetail />} />
-          <Route path="customers" element={<AdminCustomers />} />
-          <Route path="riders" element={<AdminRiders />} />
-          <Route path="riders/:id" element={<AdminRiderDetail />} />
-          <Route path="vendors" element={<AdminVendors />} />
-          <Route path="payouts" element={<AdminPayouts />} />
-          <Route path="analytics" element={<AdminAnalytics />} />
-          <Route path="settings" element={<AdminSettings />} />
+          {/* Protected routes - only accessible to admin users */}
+          <Route path="dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+          <Route path="orders/:id" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
+          <Route path="customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
+          <Route path="riders" element={<AdminRoute><AdminRiders /></AdminRoute>} />
+          <Route path="riders/:id" element={<AdminRoute><AdminRiderDetail /></AdminRoute>} />
+          <Route path="vendors" element={<AdminRoute><AdminVendors /></AdminRoute>} />
+          <Route path="payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
+          <Route path="analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+          <Route path="settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          
+          {/* New admin pages for package deliveries and food orders */}
+          <Route path="deliveries" element={<AdminRoute><AdminDeliveries /></AdminRoute>} />
+          <Route path="food-orders" element={<AdminRoute><AdminFoodOrders /></AdminRoute>} />
         </Route>
 
         {/* Rider */}
