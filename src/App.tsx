@@ -4,12 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
-import { useCapacitorPushNotifications, isPushSupported, getPushPlatform } from "@/hooks/useCapacitorPushNotifications";
+import { useCapacitorPushNotifications } from "@/hooks/useCapacitorPushNotifications";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
-import { Capacitor } from "@capacitor/core";
 
-// Page imports
 import Splash from "./pages/Splash";
 import Welcome from "./pages/Welcome";
 import OnboardingSignup from "./pages/OnboardingSignup";
@@ -39,13 +37,9 @@ import PlayAndWin from "./pages/PlayAndWin";
 import HealthyChallenge from "./pages/HealthyChallenge";
 import ShopPage from "./pages/ShopPage";
 import SendPage from "./pages/SendPage";
+import DeliveryTracking from "./pages/DeliveryTracking";
 import PharmaciesPage from "./pages/PharmaciesPage";
 import LocalMarketsPage from "./pages/LocalMarketsPage";
-
-// NEW: Delivery tracking page
-import DeliveryTracking from "./pages/DeliveryTracking";
-
-// Admin imports
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -58,8 +52,6 @@ import AdminVendors from "./pages/admin/AdminVendors";
 import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
-
-// Rider imports
 import RiderLogin from "./pages/rider/RiderLogin";
 import RiderDashboard from "./pages/rider/RiderDashboard";
 import RiderHistory from "./pages/rider/RiderHistory";
@@ -67,11 +59,7 @@ import RiderEarnings from "./pages/rider/RiderEarnings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-    },
+    queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5 * 60 * 1000 },
   },
 });
 
@@ -84,22 +72,14 @@ function PushNotificationInitializer() {
       const { data: { session } } = await supabase.auth.getSession();
       const newUserId = session?.user?.id;
       setUserId(newUserId);
-      if (newUserId && !initAttempted) {
-        console.log('👤 User authenticated, initializing push notifications...');
-        setInitAttempted(true);
-      }
+      if (newUserId && !initAttempted) setInitAttempted(true);
     };
     getSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const newUserId = session?.user?.id;
       setUserId(newUserId);
-      if (newUserId && !initAttempted) {
-        console.log('👤 Auth state changed, initializing push notifications...');
-        setInitAttempted(true);
-      }
+      if (newUserId && !initAttempted) setInitAttempted(true);
     });
-
     return () => subscription.unsubscribe();
   }, [initAttempted]);
 
@@ -131,24 +111,16 @@ function AppContent() {
         <Route path="/" element={<Splash />} />
         <Route path="/splash" element={<Splash />} />
         <Route path="/welcome" element={<Welcome />} />
-
-        {/* Onboarding */}
         <Route path="/onboarding/signup" element={<OnboardingSignup />} />
         <Route path="/onboarding/email" element={<OnboardingSignup />} />
         <Route path="/onboarding/password" element={<OnboardingSignup />} />
-
-        {/* Redirect old onboarding routes */}
         <Route path="/onboarding/phone-login" element={<Navigate to="/onboarding/signup" replace />} />
         <Route path="/onboarding/phone" element={<Navigate to="/onboarding/signup" replace />} />
         <Route path="/onboarding/location" element={<Navigate to="/onboarding/signup" replace />} />
         <Route path="/onboarding/notifications" element={<Navigate to="/onboarding/signup" replace />} />
-
-        {/* Auth */}
         <Route path="/location" element={<Location />} />
         <Route path="/signup" element={<Navigate to="/onboarding/signup" replace />} />
         <Route path="/login" element={<Login />} />
-
-        {/* Main app */}
         <Route path="/home" element={<Home />} />
         <Route path="/vendor/:id" element={<VendorDetail />} />
         <Route path="/orders" element={<Orders />} />
@@ -157,28 +129,24 @@ function AppContent() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/order-tracking" element={<OrderTracking />} />
-        <Route path="/delivery-tracking/:trackingNumber" element={<DeliveryTracking />} />
         <Route path="/rewards" element={<Rewards />} />
         <Route path="/invite" element={<InviteFriend />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/support" element={<Support />} />
         <Route path="/mira-ai" element={<MiraAIPage />} />
-
-        {/* Gift cards & Party */}
         <Route path="/gift-cards" element={<GiftCards />} />
         <Route path="/gift-card-success" element={<GiftCardSuccess />} />
         <Route path="/party" element={<PlanAParty />} />
-
-        {/* Offers, Collections, Games */}
         <Route path="/offers" element={<Offers />} />
         <Route path="/collections" element={<Collections />} />
         <Route path="/collection/:id" element={<CollectionDetail />} />
         <Route path="/play" element={<PlayAndWin />} />
         <Route path="/healthy-challenge" element={<HealthyChallenge />} />
 
-        {/* Shops, Send, Pharmacies, Markets */}
+        {/* Shops, Send Package, Delivery Tracking, Pharmacies, Markets */}
         <Route path="/shops" element={<ShopPage />} />
         <Route path="/send" element={<SendPage />} />
+        <Route path="/delivery-tracking/:trackingNumber" element={<DeliveryTracking />} />
         <Route path="/pharmacies" element={<PharmaciesPage />} />
         <Route path="/local-markets" element={<LocalMarketsPage />} />
 
