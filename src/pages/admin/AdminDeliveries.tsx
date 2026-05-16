@@ -1,6 +1,6 @@
 // src/pages/admin/AdminDeliveries.tsx
 // Shows all package deliveries placed via Send feature
-// Admin can assign riders and update delivery status
+// Admin can update delivery status
 // ✅ Only users with is_admin = true can see this page
 
 import { useState, useEffect } from "react";
@@ -25,11 +25,9 @@ export default function AdminDeliveries() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const [deliveries, setDeliveries] = useState<any[]>([]);
-  const [riders, setRiders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
-  const [assigningRider, setAssigningRider] = useState("");
 
   // Redirect if not admin
   useEffect(() => {
@@ -43,7 +41,6 @@ export default function AdminDeliveries() {
     if (!isAdmin) return;
 
     fetchDeliveries();
-    fetchRiders();
 
     const channel = supabase
       .channel("admin-deliveries")
@@ -69,34 +66,16 @@ export default function AdminDeliveries() {
   const fetchDeliveries = async () => {
     const { data, error } = await supabase
       .from("deliveries")
-      .select("id, tracking_number, status, payment_status, vehicle, package_type, fragile, pickup_address, pickup_name, pickup_phone, dropoff_address, dropoff_name, dropoff_phone, fee, note, rider_id, created_at, scheduled_time")
+      .select("id, tracking_number, status, payment_status, vehicle, package_type, fragile, pickup_address, pickup_name, pickup_phone, dropoff_address, dropoff_name, dropoff_phone, fee, note, created_at, scheduled_time")
       .order("created_at", { ascending: false });
 
-    if (error) toast.error("Could not load deliveries");
-    else setDeliveries(data || []);
-    setLoading(false);
-  };
-
-  const fetchRiders = async () => {
-    const { data } = await supabase
-      .from("riders")
-      .select("id, full_name, phone")
-      .order("full_name");
-    if (data) setRiders(data);
-  };
-
-  const handleAssignRider = async (deliveryId: string, riderId: string) => {
-    if (!riderId) return;
-    const { error } = await supabase
-      .from("deliveries")
-      .update({ rider_id: riderId, status: "assigned" })
-      .eq("id", deliveryId);
-
-    if (error) toast.error("Could not assign rider");
-    else {
-      toast.success("Rider assigned successfully!");
-      setSelectedDelivery(null);
+    if (error) {
+      console.error("Fetch error:", error);
+      toast.error("Could not load deliveries: " + error.message);
+    } else {
+      setDeliveries(data || []);
     }
+    setLoading(false);
   };
 
   const handleUpdateStatus = async (deliveryId: string, newStatus: string) => {
@@ -122,10 +101,10 @@ export default function AdminDeliveries() {
   }, {} as Record<string, number>);
 
   if (adminLoading || loading) {
-    return <div style={{ padding: 40, textAlign: "center", color: "#888" }}>Loading...</div>;
+    return <div style={{ padding: 40, textAlign: "center", color: "#888" }}>Loading deliveries...</div>;
   }
 
-  if (!isAdmin) return null; // Already redirecting, but safe fallback
+  if (!isAdmin) return null;
 
   return (
     <div style={S.page}>
@@ -177,10 +156,8 @@ export default function AdminDeliveries() {
         <div style={S.list}>
           {filtered.map((del) => {
             const sc = STATUS_COLORS[del.status] || { bg: "#f5f5f5", color: "#555" };
-            const assignedRider = riders.find((r) => r.id === del.rider_id);
             return (
               <div key={del.id} style={S.card}>
-                {/* Top row */}
                 <div style={S.cardTop}>
                   <div>
                     <p style={S.trackingNum}>#{del.tracking_number}</p>
@@ -203,7 +180,6 @@ export default function AdminDeliveries() {
                   </div>
                 </div>
 
-                {/* Route */}
                 <div style={S.route}>
                   <div style={S.routeItem}>
                     <div style={S.dotGreen} />
@@ -222,7 +198,6 @@ export default function AdminDeliveries() {
                   </div>
                 </div>
 
-                {/* Details row */}
                 <div style={S.detailRow}>
                   <span style={S.detail}>🚗 {del.vehicle}</span>
                   <span style={S.detail}>📦 {del.package_type}</span>
@@ -232,16 +207,9 @@ export default function AdminDeliveries() {
 
                 {del.note && <p style={S.note}>💬 {del.note}</p>}
 
-                {assignedRider && (
-                  <div style={S.riderTag}>
-                    🏍️ Assigned to: <strong>{assignedRider.full_name}</strong> · {assignedRider.phone}
-                  </div>
-                )}
-
-                {/* Actions */}
                 <div style={S.actions}>
                   <button style={S.actionBtn} onClick={() => setSelectedDelivery(del)}>
-                    Manage
+                    Update Status
                   </button>
                   <a
                     href={`/delivery-tracking/${del.tracking_number}`}
@@ -258,33 +226,12 @@ export default function AdminDeliveries() {
         </div>
       )}
 
-      {/* Management modal */}
+      {/* Status update modal */}
       {selectedDelivery && (
         <div style={S.overlay} onClick={() => setSelectedDelivery(null)}>
           <div style={S.modal} onClick={(e) => e.stopPropagation()}>
             <div style={S.modalHandle} />
-            <h3 style={S.modalTitle}>Manage #{selectedDelivery.tracking_number}</h3>
-
-            <p style={S.modalSection}>Assign Rider</p>
-            <select
-              style={S.select}
-              value={assigningRider}
-              onChange={(e) => setAssigningRider(e.target.value)}
-            >
-              <option value="">Select a rider...</option>
-              {riders.map((r) => (
-                <option key={r.id} value={r.id}>{r.full_name} · {r.phone}</option>
-              ))}
-            </select>
-            <button
-              style={{ ...S.modalBtn, background: assigningRider ? "#1a6b3c" : "#ccc" }}
-              disabled={!assigningRider}
-              onClick={() => handleAssignRider(selectedDelivery.id, assigningRider)}
-            >
-              Assign Rider
-            </button>
-
-            <p style={{ ...S.modalSection, marginTop: 20 }}>Update Status</p>
+            <h3 style={S.modalTitle}>Update Status – #{selectedDelivery.tracking_number}</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {ALL_STATUSES.map((status) => {
                 const sc = STATUS_COLORS[status] || { bg: "#f5f5f5", color: "#555" };
@@ -308,7 +255,6 @@ export default function AdminDeliveries() {
                 );
               })}
             </div>
-
             <button
               style={{ ...S.modalBtn, background: "#f3f4f6", color: "#333", marginTop: 20 }}
               onClick={() => setSelectedDelivery(null)}
@@ -349,7 +295,6 @@ const S: Record<string, React.CSSProperties> = {
   detailRow: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 },
   detail: { fontSize: 11, color: "#555", background: "#f5f5f5", padding: "3px 8px", borderRadius: 20 },
   note: { fontSize: 11, color: "#555", background: "#f0f4ff", padding: "6px 10px", borderRadius: 8, margin: "4px 0 8px" },
-  riderTag: { fontSize: 11, color: "#1a6b3c", background: "#f0faf4", padding: "5px 10px", borderRadius: 8, marginBottom: 8 },
   actions: { display: "flex", gap: 8 },
   actionBtn: { flex: 1, background: "#1a6b3c", color: "#fff", border: "none", borderRadius: 10, padding: "8px", fontSize: 12, fontWeight: 700, cursor: "pointer" },
   trackLink: { padding: "8px 14px", borderRadius: 10, background: "#f0faf4", color: "#1a6b3c", fontSize: 12, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center" },
@@ -358,7 +303,5 @@ const S: Record<string, React.CSSProperties> = {
   modal: { width: "100%", maxWidth: 500, background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 16px 40px" },
   modalHandle: { width: 36, height: 4, borderRadius: 99, background: "#ddd", margin: "0 auto 16px" },
   modalTitle: { fontSize: 15, fontWeight: 900, color: "#111", marginBottom: 16 },
-  modalSection: { fontSize: 12, fontWeight: 700, color: "#555", margin: "0 0 8px" },
-  select: { width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", marginBottom: 10, fontFamily: "inherit" },
   modalBtn: { width: "100%", padding: "12px", borderRadius: 12, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#fff" },
 };
